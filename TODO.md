@@ -8,8 +8,8 @@
 - make the current verbose be "normal", and make -verbose print the commandline app prints as well
 - find a way to specify the version once for everywhere
 - notification area drag/drop widget -> probably need gtk for gnome
-- figure out how to make mac and win versions (someone else :) <- via gui2exe
-- animate compressing.gif
+- figure out how to make mac and win versions (someone else :) <- via gui2exe or PyInstaller
+- animate compressing.gif <- wip has to be a label and not a icon
 - allow selection/deletion of rows from table (and subsequently the imagelist)
 - punypng api? http://www.gracepointafterfive.com/punypng/api
 - imagemagick/graphicsmagick?

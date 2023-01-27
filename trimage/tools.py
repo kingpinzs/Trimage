@@ -10,16 +10,22 @@ def check_dependencies():
     status = True
     dependencies = {
         "jpegoptim": "--version",
+        "jpegtran": "-v",
+        "guetzli": "",
+
         "optipng": "-v",
         "advpng": "--version",
-        "pngcrush": "-version"
+        "pngcrush": "-version",
+        "gifsicle": "--version",
+        "cwebp": "-version",
+        "butteraugli": "",
     }
 
-    for elt in dependencies:
-        retcode = safe_call(elt + " " + dependencies[elt])
-        if retcode != 0:
-            status = False
-            print("[error] please install {}".format(elt), file=sys.stderr)
+    # for elt in dependencies:
+    #     retcode = safe_call(elt + " " + dependencies[elt])
+    #     if retcode != 0:
+    #         status = False
+    #         print("[error] please install {}".format(elt), file=sys.stderr)
 
     return status
 

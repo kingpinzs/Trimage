@@ -28,13 +28,29 @@ Visit [Trimage.org](http://trimage.org) to install Trimage as a package.
 
 ## Building instructions
 
-### Prerequisites
+### Prerequisites to be already installed on system
+   Will be adding an automated way to pull them in at a later time
 
+##### For UI
 - PyQt5
-- advpng
+- PyQt5-Tools
+
+##### For Jpeg 
 - jpegoptim
+- jpegtran
+- guetzli
+
+##### For Png
+- advpng
 - optipng
 - pngcrush
+
+##### ?
+- butteraugli
+
+##### For GUI Design
+- pip install pyqt5 pyqt5-tools
+- sudo apt install qttools5-dev-tools
 
 ### Build from source
 

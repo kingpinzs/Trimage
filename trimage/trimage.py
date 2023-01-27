@@ -2,8 +2,9 @@
 
 import time
 import sys
-from os import listdir, path, remove, access, W_OK
+from os import listdir, path, remove, access, W_OK, getcwd
 from shutil import copy
+import subprocess
 
 from optparse import OptionParser
 from multiprocessing import cpu_count
@@ -17,8 +18,9 @@ from ThreadPool import ThreadPool
 from ui import Ui_trimage
 from tools import *
 
+from pprint import pprint
 
-VERSION = "1.0.6"
+VERSION = "1.1.0"
 
 
 class StartQt(QMainWindow):
@@ -31,10 +33,14 @@ class StartQt(QMainWindow):
         self.verbose = True
         self.imagelist = []
 
+        # set application name and organization
         QCoreApplication.setOrganizationName("Kilian Valkhof")
         QCoreApplication.setOrganizationDomain("trimage.org")
         QCoreApplication.setApplicationName("Trimage")
+
         self.settings = QSettings()
+
+        # if there is a previously saved geometry, restore it
         if self.settings.value("geometry"):
             self.restoreGeometry(self.settings.value("geometry"))
 
@@ -49,7 +55,7 @@ class StartQt(QMainWindow):
         else:
             self.quit_shortcut = QShortcut(QKeySequence("Ctrl+Q"), self)
 
-        # disable recompress
+        # disable recompress button initially
         self.ui.recompress.setEnabled(False)
 
         # make a worker thread
@@ -63,11 +69,25 @@ class StartQt(QMainWindow):
         self.thread.finished.connect(self.update_table)
         self.thread.update_ui_signal.connect(self.update_table)
 
-        self.compressing_icon = QIcon(QPixmap(self.ui.get_image("pixmaps/compressing.gif")))
+        """Has to be a label and not an icon"""
+        #self.compressing_icon = QIcon(QPixmap(self.ui.get_image("pixmaps/compressing.gif")))
+   
+        # create a QLabel for the compressing icon
+        self.compressing_icon = QLabel(self)
+        # set the size and position of the label
+        #self.compressing_icon.setGeometry(QRect(0, 0, 16, 16))
+        # self.compressing_icon.setStyleSheet("border: 1px solid black;")
+        # create a QMovie for the gif animation
+        self.compressing_icon_gif = QMovie("pixmaps/compressing.gif")
+        # set the gif animation on the label
+        self.compressing_icon.setMovie(self.compressing_icon_gif)
+        # hide the label initially
+        self.compressing_icon.hide()
 
         # activate command line options
         self.commandline_options()
 
+        # check if system tray is available and not in cli mode
         if QSystemTrayIcon.isSystemTrayAvailable() and not self.cli:
             self.systemtray = Systray(self)
 
@@ -142,7 +162,7 @@ class StartQt(QMainWindow):
             "Select one or more image files to compress",
             directory,
             # this is a fix for file dialog differentiating between cases
-            "Image files (*.png *.jpg *.jpeg *.PNG *.JPG *.JPEG)")
+            "Image files (*.png *.jpg *.jpeg *.PNG *.JPG *.JPEG *.gif *.GIF)")
 
         self.settings.setValue("fdstate", QVariant(fd.saveState()))
         if images:
@@ -172,11 +192,13 @@ class StartQt(QMainWindow):
                     delegatorlist.append(image)
             except StopIteration:
                 if not path.isdir(fullpath):
-                    self.add_image(fullpath, delegatorlist)
+                    self.add_image(fullpath, delegatorlist, self.compressing_icon, self.compressing_icon_gif)
                 else:
                     self.walk(fullpath, delegatorlist)
 
+        # update the table view
         self.update_table()
+        # send the images to the worker thread for compression
         self.thread.compress_file(delegatorlist, self.showapp, self.verbose,
             self.imagelist)
 
@@ -191,20 +213,28 @@ class StartQt(QMainWindow):
             if path.isdir(nfile):
                 self.walk(nfile, delegatorlist)
             else:
-                self.add_image(nfile, delegatorlist)
+                self.add_image(nfile, delegatorlist, self.compressing_icon, self.compressing_icon_gif)
 
-    def add_image(self, fullpath, delegatorlist):
+    def add_image(self, fullpath, delegatorlist, compressing_icon, compressing_icon_gif):
         """
         Adds an image file to the delegator list and update the tray and the title of the window.
         """
         image = Image(fullpath)
+        
+        # Check if the image is valid 
         if image.valid:
+            # Append the image to the delegatorlist and imagelist
             delegatorlist.append(image)
-            self.imagelist.append(ImageRow(image, self.compressing_icon))
+            self.imagelist.append(ImageRow(image, compressing_icon, compressing_icon_gif))
+            
+            # Check if the system tray is available and if the application is not running on CLI
             if QSystemTrayIcon.isSystemTrayAvailable() and not self.cli:
+                # Update the tool tip of the system tray icon with the number of files
                 self.systemtray.trayIcon.setToolTip("Trimage image compressor (" + str(len(self.imagelist)) + " files)")
+                # Update the title of the window with the number of files
                 self.setWindowTitle("Trimage image compressor (" + str(len(self.imagelist)) + " files)")
         else:
+            # Print error message if the image is not valid
             print("[error] {} not a supported image file and/or not writable".format(image.fullpath), file=sys.stderr)
 
     """
@@ -287,6 +317,9 @@ class TriTableModel(QAbstractTableModel):
             return QVariant(data)
         elif index.column() == 0 and role == Qt.DecorationRole:
             # decorate column 0 with an icon of the image itself
+            if isinstance(self.imagelist[index.row()][4], QLabel):
+                self.imagelist[index.row()][4].show()
+                self.imagelist[index.row()][4].move(5, 70)
             f_icon = self.imagelist[index.row()][4]
             return QVariant(f_icon)
         else:
@@ -301,10 +334,11 @@ class TriTableModel(QAbstractTableModel):
 
 
 class ImageRow:
-    def __init__(self, image, waitingIcon=None):
+    def __init__(self, image, waitingIcon=None, compressing_icon_gif=None):
         """Build the information visible in the table image row."""
         self.image = image
-
+        
+        """Having the gif play in the row"""
         d = {
             'filename_w_ext': lambda i: self.statusStr().format(i.filename_w_ext),
             'oldfilesizestr': lambda i: human_readable_size(i.oldfilesize)
@@ -314,15 +348,29 @@ class ImageRow:
             'ratiostr': lambda i:
                 "%.1f%%" % (100 - (float(i.newfilesize) / i.oldfilesize * 100))
                 if i.compressed else "",
-            'icon': lambda i: i.icon if i.compressed else waitingIcon,
+            'icon': lambda i: self.stopAnimationIcon(i.icon, waitingIcon) if i.compressed else self.animateIcon(waitingIcon, compressing_icon_gif, i ),
             'fullpath': lambda i: i.fullpath, #only used by cli
-        }
+        }#.move(5, 70)
         names = ['filename_w_ext', 'oldfilesizestr', 'newfilesizestr',
                       'ratiostr', 'icon']
         for i, n in enumerate(names):
             d[i] = d[n]
 
         self.d = d
+
+    def animateIcon(self, waitingIcon, compressing_icon_gif, index ):
+        print(index)
+        waitingIcon.setGeometry(5, 70+32, 16, 16)
+        waitingIcon.movie().start()
+        compressing_icon_gif.start()
+
+        return waitingIcon
+
+    def stopAnimationIcon(self, icon, waitingIcon):
+        waitingIcon.hide()
+        waitingIcon.movie().stop() 
+        waitingIcon.setVisible(False)
+        return icon
 
     def statusStr(self):
         """Set the status message."""
@@ -349,15 +397,17 @@ class Image:
         self.fullpath = fullpath
         self.filename_w_ext = path.basename(self.fullpath)
         self.filename, self.filetype = path.splitext(self.filename_w_ext)
+        self.file_base = self.filename+'.webp'
         if path.isfile(self.fullpath) and access(self.fullpath, W_OK):
             self.filetype = self.filetype[1:].lower()
             if self.filetype == "jpg":
                 self.filetype = "jpeg"
-            if self.filetype in ["jpeg", "png"]:
-                oldfile = QFileInfo(self.fullpath)
-                self.oldfilesize = oldfile.size()
-                self.icon = QIcon(self.fullpath)
-                self.valid = True
+            if self.filetype not in ["jpeg", "png", "gif"]:
+                raise Exception("Unsupported image format")
+            oldfile = QFileInfo(self.fullpath)
+            self.oldfilesize = oldfile.size()
+            self.icon = QIcon(self.fullpath)
+            self.valid = True
 
     def reset(self):
         self.failed = False
@@ -368,21 +418,26 @@ class Image:
     def compress(self):
         """Compress the image and return it to the thread."""
         if not self.valid:
-            raise "Tried to compress invalid image (unsupported format or not \
-            file)"
+            raise Exception("Tried to compress invalid image (unsupported format or not \
+            file)")
         self.reset()
         self.compressing = True
+        print(f'{self.fullpath}')
+
+        
         runString = {
-            "jpeg": "jpegoptim -f --strip-all '%(file)s'",
-            "png": "optipng -force -o7 '%(file)s'&&advpng -z4 '%(file)s' && pngcrush -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s'"
+            "jpeg": "jpegoptim -f --strip-all '%(file)s' && guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
+            "png": "optipng -force -o7 '%(file)s' && advpng -z4 '%(file)s' && pngcrush -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && cwebp -q 90 '%(file)s' -o '%(file)s'.webp",
+            "gif": "gifsicle -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
         # create a backup file
         backupfullpath = '/tmp/' + self.filename_w_ext
         copy(self.fullpath, backupfullpath)
         try:
-            retcode = call(runString[self.filetype] % {"file": self.fullpath},
-                shell=True, stdout=PIPE)
-        except:
+            retcode = call(runString[self.filetype] % {"file": self.fullpath, "webp_file": self.file_base},
+                shell=True, stdout=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            print(e)
             retcode = -1
         if retcode == 0:
             self.newfilesize = QFile(self.fullpath).size()
