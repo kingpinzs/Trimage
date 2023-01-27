@@ -4,8 +4,8 @@ from setuptools import setup
 
 
 setup(name = "trimage",
-    version = "1.0.6",
-    description = "Trimage image compressor - A cross-platform tool for optimizing PNG and JPG files",
+    version = "1.1.0",
+    description = "Trimage image compressor - A cross-platform tool for optimizing PNG, JPG, GIF, and WEBP files",
     author = "Kilian Valkhof, Paul Chaplin",
     author_email = "help@trimage.org",
     url = "http://trimage.org",
@@ -18,5 +18,5 @@ setup(name = "trimage",
             ('share/man/man1', ['doc/trimage.1'])],
     scripts = ["bin/trimage"],
     long_description = """Trimage is a cross-platform GUI and command-line interface to optimize image files via advpng, jpegoptim, optipng and pngcrush, depending on the filetype (currently, PNG and JPG files are supported). It was inspired by imageoptim. All image files are losslessy compressed on the highest available compression levels. Trimage gives you various input functions to fit your own workflow: A regular file dialog, dragging and dropping and various command line options.""",
-    requires = ["PyQt5"]
+    install_requires = ["PyQt5"]
   )

@@ -1,10 +1,10 @@
 [Desktop Entry]
 Name=Trimage image compressor
-Comment=A cross-platform tool for optimizing PNG and JPG files.
+Comment=A cross-platform tool for optimizing PNG, JPG, GIF, and WEBP files.
 Terminal=false
 Icon=trimage
 Type=Application
 Exec=trimage
 Categories=Application;Qt;Graphics;
 StartupNotify=true
-Keywords=compression;compressor;images;jpg;jpeg;png;web;
+Keywords=compression;compressor;images;jpg;jpeg;png;web;webp;gif;

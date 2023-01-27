@@ -1,0 +1,161 @@
+{
+    "app-id": "org.trimage.Trimage",
+    "runtime": "org.freedesktop.Platform",
+    "runtime-version": "18.08",
+    "sdk": "org.freedesktop.Sdk",
+    "command": "/usr/bin/bash",
+    "finish-args": [
+      "--share=ipc",
+      "--socket=x11",
+      "--socket=wayland",
+      "--socket=pulseaudio",
+      "--talk-name=org.freedesktop.Notifications",
+      "--talk-name=org.freedesktop.Flatpak",
+      "--device=dri",
+      "--filesystem=~/.config/dconf:ro",
+          "--filesystem=xdg-download",
+          "--filesystem=xdg-pictures",
+          "--filesystem=xdg-run/dconf",
+      "--command=runner.sh"
+    ],
+    "modules": [
+      {
+        "name": "cpython",
+        "sources": [
+            {
+                "type": "archive",
+                "url": "https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz",
+                "md5": "d33e4aae66097051c2eca45ee3604803"
+            }
+        ]
+    },
+      {
+        "name": "jpegoptim",
+        "sources": [
+          {
+            "type": "archive",
+            "url": "https://github.com/tjko/jpegoptim/archive/RELEASE.1.4.6.tar.gz",
+            "sha256": "c44dcfac0a113c3bec13d0fc60faf57a0f9a31f88473ccad33ecdf210b4c0c52"
+          }
+        ]
+      },
+      {
+        "name": "optipng",
+        "build-options": {
+          "config-opts": [
+            "--with-system-libs"
+          ]
+        },
+        "sources": [
+          {
+            "type": "archive",
+            "url": "https://netcologne.dl.sourceforge.net/project/optipng/OptiPNG/optipng-0.7.7/optipng-0.7.7.tar.gz",
+            "sha256": "4f32f233cef870b3f95d3ad6428bfe4224ef34908f1b42b0badf858216654452"
+          }
+        ]
+      },
+      {
+        "name": "pngcrush",
+        "buildsystem": "simple",
+        "sources": [
+          {
+            "type": "archive",
+            "url": "https://netcologne.dl.sourceforge.net/project/pmt/pngcrush/1.8.13/pngcrush-1.8.13.tar.gz",
+            "sha256": "bac37d4b2be88d7e88aadcde9661beb3a513a90e7d26784f906c1e2da8ba332e"
+          }
+        ],
+        "build-commands": [
+          "make -f Makefile",
+          "install -D pngcrush /app/bin/pngcrush"
+        ]
+      },
+      {
+        "name": "advpng",
+        "sources": [
+          {
+            "type": "archive",
+            "url": "https://github.com/amadvance/advancecomp/releases/download/v2.1/advancecomp-2.1.tar.gz",
+            "sha256": "3ac0875e86a8517011976f04107186d5c60d434954078bc502ee731480933eb8"
+          }
+        ]
+      },    
+      {
+        "name": "pip-install",
+        "buildsystem": "simple",
+        "build-options": {
+            "build-args": [
+                "--share=network"
+            ]
+        },
+        "build-commands": [
+            "pip3 install pip --upgrade",
+            "pip3 install setuptools --upgrade"
+        ]
+    },
+    {
+      "name": "PyQt5",
+      "buildsystem": "simple",
+      "build-options": {
+        "build-args": [
+          "--share=network"
+        ]
+      },
+      "build-commands": [
+        "pip3 install PyQt5-5.12.1-5.12.2-cp35.cp36.cp37.cp38-abi3-manylinux1_x86_64.whl"
+      ],
+      "sources": [
+        {
+          "type": "file",
+          "url": "https://files.pythonhosted.org/packages/98/61/fcd53201a23dd94a1264c29095821fdd55c58b4cd388dc7115e5288866db/PyQt5-5.12.1-5.12.2-cp35.cp36.cp37.cp38-abi3-manylinux1_x86_64.whl",
+          "sha256": "d4e88208dfd017636e4b1f407990d0c3b6cf47afed6be4f2fb6ca887ef513e4b"
+        }
+      ]
+    },
+      {
+        "name": "trimage",
+        "buildsystem": "simple",
+        "build-options": {
+          "build-args": [
+            "--share=network"
+          ]
+        },
+        "build-commands": [
+          "mkdir /app/share/applications",
+          "cp trimage.desktop /app/share/applications/org.trimage.Trimage.desktop",
+          "cp trimage.svg /app/share/applications",
+          "install -D runner.sh /app/bin/runner.sh",
+          "install -D setup.py /app/package/setup.py",
+          "cp -r trimage/ /app/package/trimage",
+          "pip3 install /app/package"
+        ],
+        "sources": [
+          {
+            "type": "file",
+            "path": "setup.py"
+          },
+          {
+            "type": "dir",
+            "path": "trimage/",
+            "dest": "trimage/"
+          },
+          {
+            "type": "dir",
+            "path": "resources/",
+            "dest": "resources/"
+          }, 
+          {
+            "type": "file",
+            "path": "runner.sh"
+          },
+          {
+            "type": "file",
+            "path": "desktop/trimage.desktop"
+          },
+          {
+            "type": "file",
+            "path": "desktop/trimage.svg"
+          }
+        ]
+      }
+    ]
+  }

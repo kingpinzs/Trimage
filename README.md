@@ -58,3 +58,8 @@ Build and install by running:
 
     python setup.py build
     sudo python setup.py install
+
+
+CREDIT
+
+@phillipsj phillipsj https://github.com/phillipsj
