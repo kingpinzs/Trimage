@@ -15,3 +15,5 @@
 - imagemagick/graphicsmagick?
 - always on top option
 - intelligently recompress, i.e. go through the list of files, recompress each until no more gains are seen (and a sensible number-of-tries limit isn't exceeded), and flag that file as fully-optimised. Repeat for each file in the list, until all are done. Saves pointlessly trying to optimise files. Consider the case of a directory of 100 files, already optimised once. Recompressing maximally compresses 90. Recompressing again would currently try to recompress all 100, when only 10 would be worthy of trying to compress further
+- clear the list
+- remove individual rows

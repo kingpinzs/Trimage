@@ -268,6 +268,9 @@ class StartQt(QMainWindow):
         # enable recompress button
         self.enable_recompress()
 
+    def remove_row(self, row):
+        self.tview.removeRow(row)
+
     def enable_recompress(self):
         """Enable the recompress button."""
         self.ui.recompress.setEnabled(True)
