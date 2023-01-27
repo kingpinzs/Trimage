@@ -1,19 +1,19 @@
-### Made by [@kilianvalkhof](https://twitter.com/kilianvalkhof)
-
-#### Other projects:
-
-- 💻 [Polypane](https://polypane.app) - Develop responsive websites and apps twice as fast on multiple screens at once
-- 🖌️ [Superposition](https://superposition.design) - Kickstart your design system by extracting design tokens from your website
-- 🗒️ [FromScratch](https://fromscratch.rocks) - A smart but simple autosaving scratchpad
-
----
-
 # Trimage image compressor
 
-A cross-platform tool for optimizing PNG and JPG files.
+A cross-platform tool for optimizing PNG, JPG, GIF, and WEBP files.
 
-Trimage is a cross-platform GUI and command-line interface to optimize image files via [advpng](http://advancemame.sourceforge.net/comp-readme.html), [jpegoptim](http://www.kokkonen.net/tjko/projects.html), [optipng](http://optipng.sourceforge.net) and [pngcrush](https://pmt.sourceforge.io/pngcrush) depending on the
-filetype (currently, PNG and JPG files are supported).
+Trimage is a cross-platform GUI and command-line interface(WIP) to optimize image files via 
+
+[advpng](http://advancemame.sourceforge.net/comp-readme.html)
+[jpegoptim](http://www.kokkonen.net/tjko/projects.html)
+[jpegtran](https://www.jpegclub.org/jpegtran/)
+[mozjpeg](https://github.com/mozilla/mozjpeg)
+[guetzli](https://github.com/google/guetzli)
+[optipng](http://optipng.sourceforge.net)
+[pngcrush](https://pmt.sourceforge.io/pngcrush) 
+
+depending on the filetype (currently, PNG, JPG, GIF, and WEBP files are supported).
+
 It was inspired by
 [imageoptim](http://imageoptim.pornel.net).
 
@@ -24,7 +24,7 @@ dragging and dropping and various command line options.
 
 ## Installation instructions
 
-Visit [Trimage.org](http://trimage.org) to install Trimage as a package.
+Visit [Trimage.org](http://trimage.org) to install the original Trimage as a package.
 
 ## Building instructions
 
@@ -45,6 +45,12 @@ Visit [Trimage.org](http://trimage.org) to install Trimage as a package.
 - optipng
 - pngcrush
 
+#### For Gif
+- gifsicle
+
+#### WEBP
+- cwebp
+
 ##### ?
 - butteraugli
 
@@ -61,5 +67,5 @@ Build and install by running:
 
 
 CREDIT
-
-@phillipsj phillipsj https://github.com/phillipsj
+### Originally Made by [@kilianvalkhof](https://twitter.com/kilianvalkhof)
+### FlatPack started by [@phillipsj](https://github.com/phillipsj)
