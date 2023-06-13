@@ -322,7 +322,7 @@ class TriTableModel(QAbstractTableModel):
             # decorate column 0 with an icon of the image itself
             if isinstance(self.imagelist[index.row()][4], QLabel):
                 self.imagelist[index.row()][4].show()
-                self.imagelist[index.row()][4].move(5, 70)
+                #self.imagelist[index.row()][4].move(5, 70)
             f_icon = self.imagelist[index.row()][4]
             return QVariant(f_icon)
         else:
@@ -426,7 +426,8 @@ class Image:
         self.reset()
         self.compressing = True
         print(f'{self.fullpath}')
-
+        directory, filename = path.split(self.fullpath)
+        output_filename = path.join(directory, self.file_base)
         
         runString = {
             "jpeg": "jpegoptim -f --strip-all '%(file)s' && guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
@@ -437,7 +438,7 @@ class Image:
         backupfullpath = '/tmp/' + self.filename_w_ext
         copy(self.fullpath, backupfullpath)
         try:
-            retcode = call(runString[self.filetype] % {"file": self.fullpath, "webp_file": self.file_base},
+            retcode = call(runString[self.filetype] % {"file": self.fullpath, "webp_file": output_filename},
                 shell=True, stdout=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             print(e)
