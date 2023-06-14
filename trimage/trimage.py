@@ -430,7 +430,7 @@ class Image:
         output_filename = path.join(directory, self.file_base)
         
         runString = {
-            "jpeg": "jpegoptim -f --strip-all '%(file)s' && guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
+            "jpeg": "./tools/jpegoptim/jpegoptim -f --strip-all '%(file)s' && ./tools/guetzli/guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/mozjpeg/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./tools/webp/cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
             "png": "optipng -force -o7 '%(file)s' && advpng -z4 '%(file)s' && pngcrush -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && cwebp -q 90 '%(file)s' -o '%(file)s'.webp",
             "gif": "gifsicle -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
@@ -459,7 +459,6 @@ class Image:
         self.compressing = False
         self.retcode = retcode
         return self
-
 
 class Worker(QThread):
     update_ui_signal = pyqtSignal()

@@ -37,8 +37,9 @@ Visit [Trimage.org](http://trimage.org) to install the original Trimage as a pac
 
 ##### For Jpeg 
 - jpegoptim
-- jpegtran
+- jpegtran (libjpeg-turbo-progs)(mozjpeg)
 - guetzli
+- cwebp
 
 ##### For Png
 - advpng
