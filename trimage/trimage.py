@@ -26,17 +26,39 @@ from pprint import pprint
 VERSION = "1.1.0"
 
 class AnimatedIconDelegate(QStyledItemDelegate):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, imagelist=None):
         super(AnimatedIconDelegate, self).__init__(parent)
+        self.movies = {}
+        self.imagelist = imagelist
 
     def paint(self, painter, option, index):
-        if index.column() == 4:  # Replace 4 with the column number where you want to display the animated icon
-            movie = index.data(Qt.UserRole)
-            movie.jumpToNextFrame()
-            pixmap = movie.currentPixmap()
-            painter.drawPixmap(option.rect, pixmap)
-        else:
-            super(AnimatedIconDelegate, self).paint(painter, option, index)
+        super(AnimatedIconDelegate, self).paint(painter, option, index)
+        if index.column() == 0:  # check if the column is 0
+            gif_movie = index.data(Qt.DecorationRole)
+            if gif_movie is not None:
+                if index.row() not in self.movies:
+                    self.movies[index.row()] = gif_movie
+                    gif_movie.frameChanged.connect(lambda: self.update(index))
+                if gif_movie.state() == QMovie.Running:  # check if the movie is running
+                    pixmap = gif_movie.currentPixmap()
+                    # adjust the size and position of the pixmap
+                    pixmap = pixmap.scaled(16, 16, Qt.KeepAspectRatio)
+                    pixmap_rect = QRect(option.rect.topLeft(), pixmap.size())
+                    # center the pixmap horizontally in the cell
+                    pixmap_rect.moveLeft(int(5))
+                    pixmap_rect.moveTop(int(option.rect.center().y() - pixmap.height() / 2))
+                    painter.drawPixmap(pixmap_rect, pixmap)
+
+    def stopAnimation(self, row):
+        if row in self.movies:
+            self.movies[row].stop()
+            del self.movies[row]
+            self.parent().update()
+
+    def update(self, index):
+        # Emit the dataChanged signal for the cell
+        self.parent().update(index)
+
 
 class StartQt(QMainWindow):
     def __init__(self, parent=None):
@@ -89,6 +111,7 @@ class StartQt(QMainWindow):
    
         # create a QLabel for the compressing icon
         self.compressing_icon = QLabel(self)
+        self.compressing_icon.setFixedSize(16, 16)
         # set the size and position of the label
         #self.compressing_icon.setGeometry(QRect(0, 0, 16, 16))
         # self.compressing_icon.setStyleSheet("border: 1px solid black;")
@@ -105,6 +128,10 @@ class StartQt(QMainWindow):
         # check if system tray is available and not in cli mode
         if QSystemTrayIcon.isSystemTrayAvailable() and not self.cli:
             self.systemtray = Systray(self)
+
+        # create and set the delegate for the column where you want to display the animated icon
+        delegate = AnimatedIconDelegate(self.ui.processedfiles, self.imagelist)
+        self.ui.processedfiles.setItemDelegateForColumn(0, delegate)  # replace 4 with the column number where you want to display the animated icon
 
     def commandline_options(self):
         """Set up the command line options."""
@@ -206,7 +233,7 @@ class StartQt(QMainWindow):
                     delegatorlist.append(image)
             except StopIteration:
                 if not path.isdir(fullpath):
-                    self.add_image(fullpath, delegatorlist, self.compressing_icon, self.compressing_icon_gif)
+                    self.add_image(fullpath, delegatorlist, "pixmaps/compressing.gif")
                 else:
                     self.walk(fullpath, delegatorlist)
 
@@ -227,19 +254,21 @@ class StartQt(QMainWindow):
             if path.isdir(nfile):
                 self.walk(nfile, delegatorlist)
             else:
-                self.add_image(nfile, delegatorlist, self.compressing_icon, self.compressing_icon_gif)
+                self.add_image(nfile, delegatorlist, "pixmaps/compressing.gif")
 
-    def add_image(self, fullpath, delegatorlist, compressing_icon, compressing_icon_gif):
+    def add_image(self, fullpath, delegatorlist, compressing_icon_path):
         """
         Adds an image file to the delegator list and update the tray and the title of the window.
         """
-        image = Image(fullpath)
-        
+        image = Image(fullpath, self)
+        image.row = len(self.imagelist)
+        imageRow = ImageRow(image, compressing_icon_path)
+
         # Check if the image is valid 
         if image.valid:
             # Append the image to the delegatorlist and imagelist
             delegatorlist.append(image)
-            self.imagelist.append(ImageRow(image, compressing_icon, compressing_icon_gif))
+            self.imagelist.append(imageRow)
             
             # Check if the system tray is available and if the application is not running on CLI
             if QSystemTrayIcon.isSystemTrayAvailable() and not self.cli:
@@ -317,7 +346,17 @@ class TriTableModel(QAbstractTableModel):
         self.imagelist = imagelist
         self.header = header
 
-    def rowCount(self, parent):
+        # Connect the frameChanged signal of each QMovie to the update method
+        for imageRow in self.imagelist:
+            imageRow.compressing_icon_gif.frameChanged.connect(self.update)
+
+    def update(self):
+        # Emit the dataChanged signal for all cells in the 'icon' column
+        top_left = self.index(0, 0)  # Replace 4 with the column number of the 'icon' column
+        bottom_right = self.index(self.rowCount() - 1, 0)
+        self.dataChanged.emit(top_left, bottom_right)
+
+    def rowCount(self, parent=QModelIndex()):
         """Count the number of rows."""
         return len(self.imagelist)
 
@@ -333,12 +372,10 @@ class TriTableModel(QAbstractTableModel):
             data = self.imagelist[index.row()][index.column()]
             return QVariant(data)
         elif index.column() == 0 and role == Qt.DecorationRole:
-            # decorate column 0 with an icon of the image itself
-            if isinstance(self.imagelist[index.row()][4], QLabel):
-                self.imagelist[index.row()][4].show()
-                #self.imagelist[index.row()][4].move(5, 70)
-            f_icon = self.imagelist[index.row()][4]
-            return QVariant(f_icon)
+            # Return the data needed by the delegate to display the icon
+            # For example, if the delegate needs the QMovie of the GIF, you can return it like this:
+            gif_movie = self.imagelist[index.row()].compressing_icon_gif
+            return QVariant(gif_movie)
         else:
             return QVariant()
 
@@ -351,9 +388,11 @@ class TriTableModel(QAbstractTableModel):
 
 
 class ImageRow:
-    def __init__(self, image, waitingIcon=None, compressing_icon_gif=None):
+    def __init__(self, image, compressing_icon_path):
         """Build the information visible in the table image row."""
         self.image = image
+        self.compressing_icon_gif = QMovie(compressing_icon_path)
+        self.compressing_icon_gif.start() 
         
         """Having the gif play in the row"""
         d = {
@@ -365,9 +404,9 @@ class ImageRow:
             'ratiostr': lambda i:
                 "%.1f%%" % (100 - (float(i.newfilesize) / i.oldfilesize * 100))
                 if i.compressed else "",
-            'icon': lambda i: self.stopAnimationIcon(i.icon, waitingIcon) if i.compressed else self.animateIcon(waitingIcon, compressing_icon_gif, i ),
+            'icon': lambda i: self.compressing_icon_gif if not i.compressed else i.icon,
             'fullpath': lambda i: i.fullpath, #only used by cli
-        }#.move(5, 70)
+        }
         names = ['filename_w_ext', 'oldfilesizestr', 'newfilesizestr',
                       'ratiostr', 'icon']
         for i, n in enumerate(names):
@@ -375,11 +414,21 @@ class ImageRow:
 
         self.d = d
 
+    def updateIcon(self):
+        # Get the current frame of the animation as a QPixmap
+        pixmap = QPixmap.fromImage(self.compressing_icon_gif.currentImage())
+        # Create an icon from the pixmap
+        icon = QIcon(pixmap)
+        # Update the icon in the model
+        self.d['icon'] = lambda i: icon
+
     def animateIcon(self, waitingIcon, compressing_icon_gif, index ):
         print(index)
-        waitingIcon.setGeometry(5, 70+32, 16, 16)
+        #waitingIcon.setGeometry(5, 70+32, 16, 16)
         waitingIcon.movie().start()
         compressing_icon_gif.start()
+
+        self.updateIcon()  # update the icon in the model
 
         return waitingIcon
 
@@ -387,6 +436,9 @@ class ImageRow:
         waitingIcon.hide()
         waitingIcon.movie().stop() 
         waitingIcon.setVisible(False)
+
+        self.updateIcon()  # update the icon in the model
+
         return icon
 
     def statusStr(self):
@@ -407,7 +459,7 @@ class ImageRow:
 
 
 class Image:
-    def __init__(self, fullpath):
+    def __init__(self, fullpath, parent=None):
         """Gather image information."""
         self.valid = False
         self.reset()
@@ -415,6 +467,8 @@ class Image:
         self.filename_w_ext = path.basename(self.fullpath)
         self.filename, self.filetype = path.splitext(self.filename_w_ext)
         self.file_base = self.filename+'.webp'
+        self.parent = parent
+        self.row = None  # Add a row attribute
         if path.isfile(self.fullpath) and access(self.fullpath, W_OK):
             self.filetype = self.filetype[1:].lower()
             # Get the actual file type based on the file contents
@@ -531,6 +585,8 @@ class Image:
         except subprocess.CalledProcessError as e:
             print(e)
             retcode = -1
+        finally:  # ensure that the compressing attribute is updated regardless of whether an exception occurs
+            self.compressing = False
         if retcode == 0:
             self.newfilesize = QFile(self.fullpath).size()
             self.webp_filesize = path.getsize(output_filename)
@@ -552,12 +608,16 @@ class Image:
             else:
                 remove(backupfullpath)
 
+            # Stop the animation and remove the QMovie object
+            delegate = self.parent.ui.processedfiles.itemDelegateForColumn(0)
+            if isinstance(delegate, AnimatedIconDelegate):
+                delegate.stopAnimation(self.row)
+
             # If the WebP file is larger than the new file, remove the WebP file
             if self.webp_filesize > self.newfilesize:
                 remove(output_filename)
         else:
             self.failed = True
-        self.compressing = False
         self.retcode = retcode
         return self
 
