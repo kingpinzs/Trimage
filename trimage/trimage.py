@@ -2,7 +2,7 @@
 
 import time
 import sys
-from os import listdir, path, remove, access, W_OK, getcwd
+from os import listdir, path, remove, access, W_OK, getcwd, rename
 from shutil import copy
 import subprocess
 
@@ -18,10 +18,25 @@ from ThreadPool import ThreadPool
 from ui import Ui_trimage
 from tools import *
 
+from PIL import Image as PILImage
+import mimetypes
+
 from pprint import pprint
 
 VERSION = "1.1.0"
 
+class AnimatedIconDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super(AnimatedIconDelegate, self).__init__(parent)
+
+    def paint(self, painter, option, index):
+        if index.column() == 4:  # Replace 4 with the column number where you want to display the animated icon
+            movie = index.data(Qt.UserRole)
+            movie.jumpToNextFrame()
+            pixmap = movie.currentPixmap()
+            painter.drawPixmap(option.rect, pixmap)
+        else:
+            super(AnimatedIconDelegate, self).paint(painter, option, index)
 
 class StartQt(QMainWindow):
     def __init__(self, parent=None):
@@ -176,7 +191,6 @@ class StartQt(QMainWindow):
     """
     Compress functions
     """
-
     def delegator(self, images):
         """
         Receive all images, check them and send them to the worker thread.
@@ -403,8 +417,45 @@ class Image:
         self.file_base = self.filename+'.webp'
         if path.isfile(self.fullpath) and access(self.fullpath, W_OK):
             self.filetype = self.filetype[1:].lower()
+            # Get the actual file type based on the file contents
+            actual_type = self.get_file_type(self.fullpath)
+            print(actual_type)
+            if actual_type is not None:
+                # If the actual extension doesn't match the current file type, update it
+                if actual_type != self.filetype:
+                    print(f'Updating file type from {self.filetype} to {actual_type}')
+                        # Change the file extension
+                    new_name = self.change_file_extension(self.fullpath, actual_type)
+                    if new_name is None:
+                        self.failed = True
+                        return
+                    # Update the file path to the new name
+                    self.fullpath = new_name
+                    self.filetype = actual_type
+                    print(f'New file name: {new_name}')
+                    print(actual_type)
             if self.filetype == "jpg":
                 self.filetype = "jpeg"
+            if self.filetype == "webp":
+                # Convert the WebP image to JPEG
+                retcode = subprocess.call(f'./tools/webp/dwebp {self.fullpath} -o {self.fullpath}.png', shell=True)
+                if retcode != 0:
+                    print(f'Failed to convert {self.fullpath} from WebP to JPEG')
+                    self.failed = True
+                    return
+                # Update the file path and type to the new JPEG image
+                self.fullpath = f'{self.fullpath}.png'
+                self.filetype = 'png'
+                # Check if the PNG image has an alpha channel
+                if not self.has_alpha_channel(self.fullpath):
+                    # Convert the PNG image to JPEG
+                    jpg_file = self.convert_png_to_jpg(self.fullpath)
+                    if jpg_file is None:
+                        self.failed = True
+                        return
+                    # Update the file path and type to the new JPEG image
+                    self.fullpath = jpg_file
+                    self.filetype = 'jpeg'
             if self.filetype not in ["jpeg", "png", "gif"]:
                 raise Exception("Unsupported image format")
             oldfile = QFileInfo(self.fullpath)
@@ -418,6 +469,37 @@ class Image:
         self.compressing = False
         self.recompression = False
 
+    def get_file_type(self, filepath):
+        try:
+            output = subprocess.check_output(['file', '--mime', '-b', filepath])
+            output = output.decode('utf-8').split(';')[0].strip()
+            _, mime_type = output.split('/', 1)  # Extract the part after the slash
+            return mime_type
+        except subprocess.CalledProcessError as e:
+            print(f'Failed to determine file type of {filepath}: {e}')
+            return None
+        
+    def change_file_extension(self, filename, new_extension):
+        base_name, _ = path.splitext(filename)
+        new_name = base_name + '.' + new_extension
+        try:
+            rename(filename, new_name)
+        except OSError as e:
+            print(f'Failed to change file extension of {filename} to {new_extension}: {e}')
+            return None
+        return new_name
+
+    def convert_png_to_jpg(self, png_file):
+        img = PILImage.open(png_file)
+        rgb_img = img.convert('RGB')
+        jpg_file = png_file.rsplit('.', 1)[0] + '.jpg'
+        rgb_img.save(jpg_file)
+        return jpg_file
+
+    def has_alpha_channel(self, image_file):
+        img = PILImage.open(image_file)
+        return img.mode in ('RGBA', 'LA')
+
     def compress(self):
         """Compress the image and return it to the thread."""
         if not self.valid:
@@ -426,11 +508,17 @@ class Image:
         self.reset()
         self.compressing = True
         print(f'{self.fullpath}')
+
+        # create a backup file with "original" in the filename
+        backupfilename = self.filename + "_original." + self.filetype
+        backupfullpath = path.join(path.dirname(self.fullpath), backupfilename)
+        copy(self.fullpath, backupfullpath)
+
         directory, filename = path.split(self.fullpath)
         output_filename = path.join(directory, self.file_base)
         
         runString = {
-            "jpeg": "./tools/jpegoptim/jpegoptim -f --strip-all '%(file)s' && ./tools/guetzli/guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/mozjpeg/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./tools/webp/cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
+            "jpeg": "./tools/jpegoptim/jpegoptim -f --strip-all '%(file)s' && ./tools/guetzli/guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/mozjpeg/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./tools/webp/cwebp -q 100 '%(file)s' -o '%(webp_file)s'",
             "png": "optipng -force -o7 '%(file)s' && advpng -z4 '%(file)s' && pngcrush -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && cwebp -q 90 '%(file)s' -o '%(file)s'.webp",
             "gif": "gifsicle -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
@@ -445,20 +533,34 @@ class Image:
             retcode = -1
         if retcode == 0:
             self.newfilesize = QFile(self.fullpath).size()
+            self.webp_filesize = path.getsize(output_filename)
             self.compressed = True
 
-            # checks the new file and copy the backup
+            # If the compressed file is smaller than the new file, replace the new file with the compressed file
+            if self.webp_filesize < self.newfilesize:
+                remove(self.fullpath)
+                self.fullpath = output_filename
+                self.newfilesize = self.webp_filesize
+
+            # If the new file is larger than the original file, replace the new file with the original file
             if self.newfilesize >= self.oldfilesize:
+                remove(self.fullpath)
                 copy(backupfullpath, self.fullpath)
                 self.newfilesize = self.oldfilesize
 
-            # removes the backup file
-            remove(backupfullpath)
+            # If the new file is smaller than the original file, remove the original file
+            else:
+                remove(backupfullpath)
+
+            # If the WebP file is larger than the new file, remove the WebP file
+            if self.webp_filesize > self.newfilesize:
+                remove(output_filename)
         else:
             self.failed = True
         self.compressing = False
         self.retcode = retcode
         return self
+
 
 class Worker(QThread):
     update_ui_signal = pyqtSignal()
