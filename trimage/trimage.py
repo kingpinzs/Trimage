@@ -572,8 +572,8 @@ class Image:
         output_filename = path.join(directory, self.file_base)
         
         runString = {
-            "jpeg": "./tools/jpegoptim/jpegoptim -f --strip-all '%(file)s' && ./tools/guetzli/guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/mozjpeg/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./tools/webp/cwebp -q 100 '%(file)s' -o '%(webp_file)s'",
-            "png": "optipng -force -o7 '%(file)s' && advpng -z4 '%(file)s' && pngcrush -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && cwebp -q 90 '%(file)s' -o '%(file)s'.webp",
+            "jpeg": "./tools/jpegoptim/jpegoptim -f --strip-all '%(file)s' && ./tools/guetzli/guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/mozjpeg/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./tools/webp/cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
+            "png": "optipng -force -o7 '%(file)s' && advpng -z4 '%(file)s' && pngcrush -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
             "gif": "gifsicle -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
         # create a backup file
@@ -592,11 +592,11 @@ class Image:
             self.webp_filesize = path.getsize(output_filename)
             self.compressed = True
 
-            # If the compressed file is smaller than the new file, replace the new file with the compressed file
-            if self.webp_filesize < self.newfilesize:
-                remove(self.fullpath)
-                self.fullpath = output_filename
-                self.newfilesize = self.webp_filesize
+            # # If the compressed file is smaller than the new file, replace the new file with the compressed file
+            # if self.webp_filesize < self.newfilesize:
+            #     remove(self.fullpath)
+            #     self.fullpath = output_filename
+            #     self.newfilesize = self.webp_filesize
 
             # If the new file is larger than the original file, replace the new file with the original file
             if self.newfilesize >= self.oldfilesize:
