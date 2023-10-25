@@ -2,7 +2,7 @@
 
 import time
 import sys
-from os import listdir, path, remove, access, W_OK, getcwd, rename
+from os import listdir, path, remove, access, W_OK, getcwd, rename, name
 from shutil import copy
 import subprocess
 
@@ -25,7 +25,7 @@ from pprint import pprint
 
 VERSION = "1.1.0"
 
-
+import mimetypes
 import platform
 
 # Determine the OS
@@ -33,7 +33,7 @@ os_type = platform.system()
 
 # Define the command strings based on the OS
 if os_type == "Windows":
-    tool_path = "tools/windows"
+    tool_path = "tools\windows"
     exe_ext = ".exe"
 else:
     tool_path = "tools"
@@ -272,7 +272,7 @@ class StartQt(QMainWindow):
             if path.isdir(nfile):
                 self.walk(nfile, delegatorlist)
             else:
-                self.add_image(nfile, delegatorlist, "pixmaps/compressing.gif")
+                self.add_image(nfile, delegatorlist, compressing_icon_path)
 
     def add_image(self, fullpath, delegatorlist, compressing_icon_path):
         """
@@ -542,14 +542,24 @@ class Image:
         self.recompression = False
 
     def get_file_type(self, filepath):
-        try:
-            output = subprocess.check_output(['file', '--mime', '-b', filepath])
-            output = output.decode('utf-8').split(';')[0].strip()
-            _, mime_type = output.split('/', 1)  # Extract the part after the slash
-            return mime_type
-        except subprocess.CalledProcessError as e:
-            print(f'Failed to determine file type of {filepath}: {e}')
-            return None
+        if name == 'posix':
+        # Unix/Linux/macOS
+            try:
+                output = subprocess.check_output(['file', '--mime', '-b', filepath])
+                output = output.decode('utf-8').split(';')[0].strip()
+                _, mime_type = output.split('/', 1)  # Extract the part after the slash
+                return mime_type
+            except subprocess.CalledProcessError as e:
+                print(f'Failed to determine file type of {filepath}: {e}')
+                return None
+        else:
+            # Windows
+            mime_type, _ = mimetypes.guess_type(filepath)
+            if mime_type:
+                return mime_type.split('/')[-1]  # Extract the part after the slash
+            else:
+                print(f'Failed to determine file type of {filepath}')
+                return None
         
     def change_file_extension(self, filename, new_extension):
         base_name, _ = path.splitext(filename)
