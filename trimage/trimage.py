@@ -39,6 +39,9 @@ else:
     tool_path = "tools"
     exe_ext = ""
 
+# files
+compressing_icon_path = path.join("pixmaps", "compressing.gif")
+
 
 class AnimatedIconDelegate(QStyledItemDelegate):
     def __init__(self, parent=None, imagelist=None):
@@ -131,7 +134,7 @@ class StartQt(QMainWindow):
         #self.compressing_icon.setGeometry(QRect(0, 0, 16, 16))
         # self.compressing_icon.setStyleSheet("border: 1px solid black;")
         # create a QMovie for the gif animation
-        self.compressing_icon_gif = QMovie("pixmaps/compressing.gif")
+        self.compressing_icon_gif = QMovie(compressing_icon_path)
         # set the gif animation on the label
         self.compressing_icon.setMovie(self.compressing_icon_gif)
         # hide the label initially
@@ -248,7 +251,7 @@ class StartQt(QMainWindow):
                     delegatorlist.append(image)
             except StopIteration:
                 if not path.isdir(fullpath):
-                    self.add_image(fullpath, delegatorlist, "pixmaps/compressing.gif")
+                    self.add_image(fullpath, delegatorlist, compressing_icon_path)
                 else:
                     self.walk(fullpath, delegatorlist)
 
@@ -588,7 +591,7 @@ class Image:
         
         runString = {
             "jpeg": f"./{tool_path}/jpegoptim/jpegoptim{exe_ext} -f --strip-all '%(file)s' && ./{tool_path}/guetzli/guetzli{exe_ext} --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./{tool_path}/mozjpeg/jpegtran-static{exe_ext} -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./{tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
-            "png": f"./{tool_path}/optipng/optipng{exe_ext} -force -o7 '%(file)s' && ./{tool_path}/advpng/advpng{exe_ext} -z4 '%(file)s' && ./{tool_path}/pngcrush/pngcrush{exe_ext} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && ./{tool_path}/wwebp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
+            "png": f"./{tool_path}/optipng/optipng{exe_ext} -force -o7 '%(file)s' && ./{tool_path}/advpng/advpng{exe_ext} -z4 '%(file)s' && ./{tool_path}/pngcrush/pngcrush{exe_ext} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && ./{tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
             "gif": f"./{tool_path}/gifsicle/gifsicle{exe_ext} -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
         # create a backup file
