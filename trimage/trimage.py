@@ -43,6 +43,16 @@ else:
 # files
 compressing_icon_path = path.join("pixmaps", "compressing.gif")
 
+#Get the path to the compression libraries OS independent
+jpegoptim_path = path.join(tool_path, "jpegoptim", f"jpegoptim{exe_ext}")
+guetzli_path = path.join(tool_path, "guetzli", f"guetzli{exe_ext}")
+mozjpeg_path = path.join(tool_path, "mozjpeg", f"jpegtran-static{exe_ext}")
+webp_path = path.join(tool_path, "webp", f"cwebp{exe_ext}")
+optipng_path = path.join(tool_path, "optipng", f"optipng{exe_ext}")
+advpng_path = path.join(tool_path, "advpng", f"advpng{exe_ext}")
+pngcrush_path = path.join(tool_path, "pngcrush", f"pngcrush{exe_ext}")
+gifsicle_path = path.join(tool_path, "gifsicle", f"gifsicle{exe_ext}")
+
 
 # Get the platform-independent temp directory
 temp_dir = tempfile.gettempdir()
@@ -604,9 +614,9 @@ class Image:
         output_filename = path.join(directory, self.file_base)
         
         runString = {
-            "jpeg": f"{tool_path}/jpegoptim/jpegoptim{exe_ext} -f --strip-all '%(file)s' && {tool_path}/guetzli/guetzli{exe_ext} --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && {tool_path}/mozjpeg/jpegtran-static{exe_ext} -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && {tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
-            "png": f"{tool_path}/optipng/optipng{exe_ext} -force -o7 '%(file)s' && {tool_path}/advpng/advpng{exe_ext} -z4 '%(file)s' && {tool_path}/pngcrush/pngcrush{exe_ext} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && {tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
-            "gif": f"{tool_path}/gifsicle/gifsicle{exe_ext} -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
+            "jpeg": f"{jpegoptim_path} -f --strip-all '%(file)s' && {guetzli_path} --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && {mozjpeg_path} -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && {webp_path} -q 90 '%(file)s' -o '%(webp_file)s'",
+            "png": f"{optipng_path} -force -o7 '%(file)s' && {advpng_path} -z4 '%(file)s' && {pngcrush_path} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && {webp_path} -q 90 '%(file)s' -o '%(webp_file)s'",
+            "gif": f"{gifsicle_path} -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
         # create a backup file
         backupfullpath = path.join(temp_dir, self.filename_w_ext)
