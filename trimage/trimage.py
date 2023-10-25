@@ -3,6 +3,7 @@
 import time
 import sys
 from os import listdir, path, remove, access, W_OK, getcwd, rename, name
+import tempfile
 from shutil import copy
 import subprocess
 
@@ -36,12 +37,15 @@ if os_type == "Windows":
     tool_path = "tools\windows"
     exe_ext = ".exe"
 else:
-    tool_path = "tools"
+    tool_path = "./tools"
     exe_ext = ""
 
 # files
 compressing_icon_path = path.join("pixmaps", "compressing.gif")
+backupfullpath = path.join('tmp', self.filename_w_ext)
 
+# Get the platform-independent temp directory
+temp_dir = tempfile.gettempdir()
 
 class AnimatedIconDelegate(QStyledItemDelegate):
     def __init__(self, parent=None, imagelist=None):
@@ -605,7 +609,7 @@ class Image:
             "gif": f"./{tool_path}/gifsicle/gifsicle{exe_ext} -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
         # create a backup file
-        backupfullpath = '/tmp/' + self.filename_w_ext
+        backupfullpath = os.path.join(temp_dir, self.filename_w_ext)
         copy(self.fullpath, backupfullpath)
         try:
             retcode = call(runString[self.filetype] % {"file": self.fullpath, "webp_file": output_filename},
