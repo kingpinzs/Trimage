@@ -40,7 +40,7 @@ if os_type == "Windows":
 else:
     tool_path = "./tools"
     exe_ext = ""
-    move_cmd = "{move_cmd}"
+    move_cmd = "mv"
 
 # files
 compressing_icon_path = path.join("pixmaps", "compressing.gif")
@@ -616,9 +616,9 @@ class Image:
         output_filename = path.join(directory, self.file_base)
         
         runString = {
-            "jpeg": f"{jpegoptim_path} -f --strip-all '%(file)s' && {guetzli_path} --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && {move_cmd} '%(file)s'.bak '%(file)s' && {mozjpeg_path} -optimize '%(file)s' > '%(file)s'.bak && {move_cmd} '%(file)s'.bak '%(file)s' && {webp_path} -q 90 '%(file)s' -o '%(webp_file)s'",
-            "png": f"{optipng_path} -force -o7 '%(file)s' && {advpng_path} -z4 '%(file)s' && {pngcrush_path} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && {move_cmd} '%(file)s.bak' '%(file)s' && {webp_path} -q 90 '%(file)s' -o '%(webp_file)s'",
-            "gif": f"{gifsicle_path} -O3 '%(file)s' -o '%(file)s'.bak && {move_cmd} '%(file)s'.bak '%(file)s'"
+            "jpeg": f'{jpegoptim_path} -f --strip-all "%(file)s" && {guetzli_path} --verbose  --quality 100 --nomemlimit "%(file)s" "%(file)s.bak" && {move_cmd} "%(file)s".bak "%(file)s" && {mozjpeg_path} -optimize "%(file)s" > "%(file)s".bak && {move_cmd} "%(file)s".bak "%(file)s" && {webp_path} -q 90 "%(file)s" -o "%(webp_file)s"',
+            "png": f'{optipng_path} -force -o7 "%(file)s" && {advpng_path} -z4 "%(file)s" && {pngcrush_path} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time "%(file)s" "%(file)s.bak" && {move_cmd} "%(file)s.bak" "%(file)s" && {webp_path} -q 90 "%(file)s" -o "%(webp_file)s"',
+            "gif": f'{gifsicle_path} -O3 "%(file)s" -o "%(file)s".bak && {move_cmd} "%(file)s".bak "%(file)s"'
         }
         # create a backup file
         backupfullpath = path.join(temp_dir, self.filename_w_ext)
