@@ -25,6 +25,21 @@ from pprint import pprint
 
 VERSION = "1.1.0"
 
+
+import platform
+
+# Determine the OS
+os_type = platform.system()
+
+# Define the command strings based on the OS
+if os_type == "Windows":
+    tool_path = "tools/windows"
+    exe_ext = ".exe"
+else:
+    tool_path = "tools"
+    exe_ext = ""
+
+
 class AnimatedIconDelegate(QStyledItemDelegate):
     def __init__(self, parent=None, imagelist=None):
         super(AnimatedIconDelegate, self).__init__(parent)
@@ -572,9 +587,9 @@ class Image:
         output_filename = path.join(directory, self.file_base)
         
         runString = {
-            "jpeg": "./tools/jpegoptim/jpegoptim -f --strip-all '%(file)s' && ./tools/guetzli/guetzli --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./tools/mozjpeg/jpegtran-static -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./tools/webp/cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
-            "png": "optipng -force -o7 '%(file)s' && advpng -z4 '%(file)s' && pngcrush -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && cwebp -q 90 '%(file)s' -o '%(webp_file)s'",
-            "gif": "gifsicle -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
+            "jpeg": f"./{tool_path}/jpegoptim/jpegoptim{exe_ext} -f --strip-all '%(file)s' && ./{tool_path}/guetzli/guetzli{exe_ext} --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./{tool_path}/mozjpeg/jpegtran-static{exe_ext} -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./{tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
+            "png": f"./{tool_path}/optipng/optipng{exe_ext} -force -o7 '%(file)s' && ./{tool_path}/advpng/advpng{exe_ext} -z4 '%(file)s' && ./{tool_path}/pngcrush/pngcrush{exe_ext} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && ./{tool_path}/wwebp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
+            "gif": f"./{tool_path}/gifsicle/gifsicle{exe_ext} -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
         # create a backup file
         backupfullpath = '/tmp/' + self.filename_w_ext
@@ -671,7 +686,7 @@ class Systray(QWidget):
 
     def createActions(self):
         self.quitAction = QAction(self.tr("&Quit"), self)
-        self.quitAction.triggered.connect(self.parent.close)
+        self.quitAction.triggered.connect(QCoreApplication.quit)
 
         self.addFiles = QAction(self.tr("&Add and compress"), self)
         icon = QIcon()
@@ -703,6 +718,7 @@ class Systray(QWidget):
 
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.trayIcon = QSystemTrayIcon(self)
+            self.trayIcon.activated.connect(lambda reason: self.hideMain.activate(QAction.Trigger))
             self.trayIcon.setContextMenu(self.trayIconMenu)
             self.trayIcon.setToolTip("Trimage image compressor")
             self.trayIcon.setIcon(QIcon(self.parent.ui.get_image("pixmaps/trimage-icon.png")))

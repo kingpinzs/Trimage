@@ -6,7 +6,7 @@ from setuptools import setup
 setup(name = "trimage",
     version = "1.1.0",
     description = "Trimage image compressor - A cross-platform tool for optimizing PNG, JPG, GIF, and WEBP files",
-    author = "Kilian Valkhof, Paul Chaplin",
+    author = "Kilian Valkhof, Paul Chaplin, Jeremy King, and others",
     author_email = "help@trimage.org",
     url = "http://trimage.org",
     license = "MIT license",

@@ -8,8 +8,7 @@
 - make the current verbose be "normal", and make -verbose print the commandline app prints as well
 - find a way to specify the version once for everywhere
 - notification area drag/drop widget -> probably need gtk for gnome
-- figure out how to make mac and win versions (someone else :) <- via gui2exe or PyInstaller
-- animate compressing.gif <- wip has to be a label and not a icon
+- figure out how to make mac and win versions <- via PyInstaller
 - allow selection/deletion of rows from table (and subsequently the imagelist)
 - punypng api? http://www.gracepointafterfive.com/punypng/api
 - imagemagick/graphicsmagick?
@@ -17,3 +16,6 @@
 - intelligently recompress, i.e. go through the list of files, recompress each until no more gains are seen (and a sensible number-of-tries limit isn't exceeded), and flag that file as fully-optimised. Repeat for each file in the list, until all are done. Saves pointlessly trying to optimise files. Consider the case of a directory of 100 files, already optimised once. Recompressing maximally compresses 90. Recompressing again would currently try to recompress all 100, when only 10 would be worthy of trying to compress further
 - clear the list
 - remove individual rows
+- add a "clear" button to the list
+- drag and drop folders
+
