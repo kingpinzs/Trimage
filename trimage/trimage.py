@@ -604,9 +604,9 @@ class Image:
         output_filename = path.join(directory, self.file_base)
         
         runString = {
-            "jpeg": f"./{tool_path}/jpegoptim/jpegoptim{exe_ext} -f --strip-all '%(file)s' && ./{tool_path}/guetzli/guetzli{exe_ext} --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && ./{tool_path}/mozjpeg/jpegtran-static{exe_ext} -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && ./{tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
-            "png": f"./{tool_path}/optipng/optipng{exe_ext} -force -o7 '%(file)s' && ./{tool_path}/advpng/advpng{exe_ext} -z4 '%(file)s' && ./{tool_path}/pngcrush/pngcrush{exe_ext} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && ./{tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
-            "gif": f"./{tool_path}/gifsicle/gifsicle{exe_ext} -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
+            "jpeg": f"{tool_path}/jpegoptim/jpegoptim{exe_ext} -f --strip-all '%(file)s' && {tool_path}/guetzli/guetzli{exe_ext} --verbose  --quality 100 --nomemlimit '%(file)s' '%(file)s.bak' && mv '%(file)s'.bak '%(file)s' && {tool_path}/mozjpeg/jpegtran-static{exe_ext} -optimize '%(file)s' > '%(file)s'.bak && mv '%(file)s'.bak '%(file)s' && {tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
+            "png": f"{tool_path}/optipng/optipng{exe_ext} -force -o7 '%(file)s' && {tool_path}/advpng/advpng{exe_ext} -z4 '%(file)s' && {tool_path}/pngcrush/pngcrush{exe_ext} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time '%(file)s' '%(file)s.bak' && mv '%(file)s.bak' '%(file)s' && {tool_path}/webp/cwebp{exe_ext} -q 90 '%(file)s' -o '%(webp_file)s'",
+            "gif": f"{tool_path}/gifsicle/gifsicle{exe_ext} -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
         # create a backup file
         backupfullpath = path.join(temp_dir, self.filename_w_ext)
