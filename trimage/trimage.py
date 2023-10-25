@@ -497,7 +497,7 @@ class Image:
         """Gather image information."""
         self.valid = False
         self.reset()
-        self.fullpath = fullpath
+        self.fullpath = path.normpath(fullpath)
         self.filename_w_ext = path.basename(self.fullpath)
         self.filename, self.filetype = path.splitext(self.filename_w_ext)
         self.file_base = self.filename+'.webp'
