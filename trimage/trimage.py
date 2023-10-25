@@ -609,7 +609,7 @@ class Image:
             "gif": f"./{tool_path}/gifsicle/gifsicle{exe_ext} -O3 '%(file)s' -o '%(file)s'.bak && mv '%(file)s'.bak '%(file)s'"
         }
         # create a backup file
-        backupfullpath = os.path.join(temp_dir, self.filename_w_ext)
+        backupfullpath = path.join(temp_dir, self.filename_w_ext)
         copy(self.fullpath, backupfullpath)
         try:
             retcode = call(runString[self.filetype] % {"file": self.fullpath, "webp_file": output_filename},
