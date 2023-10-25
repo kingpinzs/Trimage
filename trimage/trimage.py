@@ -42,7 +42,7 @@ else:
 
 # files
 compressing_icon_path = path.join("pixmaps", "compressing.gif")
-backupfullpath = path.join('tmp', self.filename_w_ext)
+
 
 # Get the platform-independent temp directory
 temp_dir = tempfile.gettempdir()
