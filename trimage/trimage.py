@@ -28,6 +28,7 @@ VERSION = "1.1.0"
 
 import mimetypes
 import platform
+from itertools import combinations
 
 # Determine the OS
 os_type = platform.system()
@@ -44,6 +45,11 @@ else:
 
 # files
 compressing_icon_path = path.join("pixmaps", "compressing.gif")
+trimage_icon_path = path.join("pixmaps", "trimage-icon.png")
+list_add_path = path.join("pixmaps", "list-add.png")
+view_refresh_path = path.join("pixmaps", "view-refresh.png")
+
+
 
 #Get the path to the compression libraries OS independent
 jpegoptim_path = path.join(tool_path, "jpegoptim", f"jpegoptim{exe_ext}")
@@ -135,6 +141,7 @@ class StartQt(QMainWindow):
         # connect signals with slots
         self.ui.addfiles.clicked.connect(self.file_dialog)
         self.ui.recompress.clicked.connect(self.recompress_files)
+        self.ui.clearTable.clicked.connect(self.clear_table)
         self.quit_shortcut.activated.connect(self.close)
         self.ui.processedfiles.drop_event_signal.connect(self.file_drop)
         self.thread.finished.connect(self.update_table)
@@ -347,6 +354,12 @@ class StartQt(QMainWindow):
 
     def remove_row(self, row):
         self.tview.removeRow(row)
+
+    def clear_table(self):
+        self.imagelist.clear()  # Assuming imagelist is a list. Adjust accordingly.
+        self.update_table()  # Refresh the table view.
+
+
 
     def enable_recompress(self):
         """Enable the recompress button."""
@@ -616,25 +629,103 @@ class Image:
         output_filename = path.join(directory, self.file_base)
         
         runString = {
-            "jpeg": f'{jpegoptim_path} -f --strip-all "%(file)s" && {guetzli_path} --verbose  --quality 100 --nomemlimit "%(file)s" "%(file)s.bak" && {move_cmd} "%(file)s".bak "%(file)s" && {mozjpeg_path} -optimize "%(file)s" > "%(file)s".bak && {move_cmd} "%(file)s".bak "%(file)s" && {webp_path} -q 90 "%(file)s" -o "%(webp_file)s"',
-            "png": f'{optipng_path} -force -o7 "%(file)s" && {advpng_path} -z4 "%(file)s" && {pngcrush_path} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time "%(file)s" "%(file)s.bak" && {move_cmd} "%(file)s.bak" "%(file)s" && {webp_path} -q 90 "%(file)s" -o "%(webp_file)s"',
-            "gif": f'{gifsicle_path} -O3 "%(file)s" -o "%(file)s".bak && {move_cmd} "%(file)s".bak "%(file)s"'
+            "jpeg": [
+                f'{jpegoptim_path} -f --strip-all "%(file)s"',
+                f'{guetzli_path} --verbose --quality 100 --nomemlimit "%(file)s" "%(file)s.bak"',
+                f'{move_cmd} "%(file)s".bak "%(file)s"',
+                f'{mozjpeg_path} -optimize "%(file)s" > "%(file)s".bak',
+                f'{move_cmd} "%(file)s".bak "%(file)s"',
+                f'{webp_path} -q 90 "%(file)s" -o "%(webp_file)s"'
+            ],
+            "png": [
+                f'{optipng_path} -force -o7 "%(file)s"',
+                f'{advpng_path} -z4 "%(file)s"',
+                f'{pngcrush_path} -rem gAMA -rem alla -rem cHRM -rem iCCP -rem sRGB -rem time "%(file)s" "%(file)s.bak"',
+                f'{move_cmd} "%(file)s".bak "%(file)s"',
+                f'{webp_path} -q 90 "%(file)s" -o "%(webp_file)s"'
+            ],
+            "gif": [
+                f'{gifsicle_path} -O3 "%(file)s" -o "%(file)s".bak',
+                f'{move_cmd} "%(file)s".bak "%(file)s"'
+            ]
         }
+
         # create a backup file
         backupfullpath = path.join(temp_dir, self.filename_w_ext)
         copy(self.fullpath, backupfullpath)
-        try:
-            retcode = call(runString[self.filetype] % {"file": self.fullpath, "webp_file": output_filename},
-                shell=True, stdout=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            print(e)
-            retcode = -1
-        finally:  # ensure that the compressing attribute is updated regardless of whether an exception occurs
-            self.compressing = False
-        if retcode == 0:
+
+        # keep track of the best file
+        best_file = None
+        best_size = float('inf')
+        best_combo = None  # To keep track of the best combo
+
+        # keep track of the return code for each command
+        overall_retcode = 0
+        # Step 1: Backup original
+        original_file = self.fullpath  # Your original file
+        backup_file = path.join(temp_dir, self.filename_w_ext)  # Replace with actual path
+        copy(original_file, backup_file)
+
+        # Loop through each command in the array for the given file type
+        for command in runString[self.filetype]:
+            formatted_command = command % {"file": backup_file, "webp_file": output_filename}
+            try:
+                retcode = call(formatted_command, shell=True, stdout=subprocess.PIPE)
+                if retcode != 0:
+                    print(f"Command failed with return code {retcode}")
+                    overall_retcode = retcode
+                    break
+                else:
+                    # Check if the new file is smaller than the best file
+                    newfilesize = QFile(self.fullpath).size()
+                    if newfilesize < best_size:
+                        best_file = backup_file
+                        best_size = newfilesize
+                copy(original_file, backup_file)
+            except subprocess.CalledProcessError as e:
+                print(e)
+                overall_retcode = -1
+                break
+            finally:  # Ensure that the compressing attribute is updated regardless of whether an exception occurs
+                self.compressing = False
+
+        # Step 3: Combination Tests
+        self.compressing = True
+        for r in range(2, len(runString[self.filetype]) + 1):
+            for combo in combinations(runString[self.filetype], r):
+                combo_commands = " && ".join(combo)
+                combo_commands = combo_commands % {"file": backup_file, "webp_file": output_filename}
+                try:
+                    retcode = call(combo_commands, shell=True, stdout=subprocess.PIPE)
+                    if retcode == 0:
+                        # Check the new file size
+                        new_size = path.getsize(backup_file)
+                        
+                        # If the new file is smaller, update best_file and best_size
+                        if new_size < best_size:
+                            best_size = new_size
+                            best_unique_file = f"{backup_file}_combo_{r}.jpg"  # or whatever your file type is
+                            copy(backup_file, best_unique_file)
+                            best_file = best_unique_file
+                            best_combo = combo  # Update the best_combo
+                            
+                    # Restore from the backup for the next test
+                    copy(original_file, backup_file)
+
+                except subprocess.CalledProcessError as e:
+                    print(f"Command {combo_commands} failed: {e}")
+                finally:
+                    self.compressing = False
+        # Check the overall return code to see if all commands were successful
+        if overall_retcode == 0:
             self.newfilesize = QFile(self.fullpath).size()
             self.webp_filesize = path.getsize(output_filename)
+            copy(best_file, original_file)
             self.compressed = True
+
+                # Print the best combo that resulted in the smallest file
+            if best_combo:
+                print(f"The best compression combo was: {best_combo}")
 
             # # If the compressed file is smaller than the new file, replace the new file with the compressed file
             # if self.webp_filesize < self.newfilesize:
@@ -719,14 +810,14 @@ class Systray(QWidget):
 
         self.addFiles = QAction(self.tr("&Add and compress"), self)
         icon = QIcon()
-        icon.addPixmap(QPixmap(self.parent.ui.get_image(("pixmaps/list-add.png"))),
+        icon.addPixmap(QPixmap(self.parent.ui.get_image((list_add_path))),
             QIcon.Normal, QIcon.Off)
         self.addFiles.setIcon(icon)
         self.addFiles.triggered.connect(self.parent.file_dialog)
 
         self.recompress = QAction(self.tr("&Recompress"), self)
         icon2 = QIcon()
-        icon2.addPixmap(QPixmap(self.parent.ui.get_image(("pixmaps/view-refresh.png"))),
+        icon2.addPixmap(QPixmap(self.parent.ui.get_image((view_refresh_path))),
             QIcon.Normal, QIcon.Off)
         self.recompress.setIcon(icon2)
         self.recompress.setDisabled(True)
@@ -750,7 +841,7 @@ class Systray(QWidget):
             self.trayIcon.activated.connect(lambda reason: self.hideMain.activate(QAction.Trigger))
             self.trayIcon.setContextMenu(self.trayIconMenu)
             self.trayIcon.setToolTip("Trimage image compressor")
-            self.trayIcon.setIcon(QIcon(self.parent.ui.get_image("pixmaps/trimage-icon.png")))
+            self.trayIcon.setIcon(QIcon(self.parent.ui.get_image(trimage_icon_path)))
 
 
 if __name__ == "__main__":

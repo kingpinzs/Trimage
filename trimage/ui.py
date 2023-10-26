@@ -6,6 +6,11 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
+trimage_icon_path = path.join("pixmaps", "trimage-icon.png")
+list_add_path = path.join("pixmaps", "list-add.png")
+view_refresh_path = path.join("pixmaps", "view-refresh.png")
+clear_table_path = path.join("pixmaps", "clear_table.png")
+
 
 class TrimageTableView(QTableView):
 
@@ -45,7 +50,7 @@ class Ui_trimage():
         trimage.setObjectName("trimage")
         trimage.resize(600, 170)
 
-        trimageIcon = QIcon(self.get_image("pixmaps/trimage-icon.png"))
+        trimageIcon = QIcon(self.get_image(trimage_icon_path))
         trimage.setWindowIcon(trimageIcon)
 
         self.centralwidget = QWidget(trimage)
@@ -90,7 +95,7 @@ class Ui_trimage():
         self.addfiles.setFont(font)
         self.addfiles.setCursor(Qt.PointingHandCursor)
         icon = QIcon()
-        icon.addPixmap(QPixmap(self.get_image("pixmaps/list-add.png")), QIcon.Normal, QIcon.Off)
+        icon.addPixmap(QPixmap(self.get_image(list_add_path)), QIcon.Normal, QIcon.Off)
         self.addfiles.setIcon(icon)
         self.addfiles.setObjectName("addfiles")
         self.addfiles.setAcceptDrops(True)
@@ -116,12 +121,24 @@ class Ui_trimage():
         self.recompress.setCursor(Qt.PointingHandCursor)
 
         icon1 = QIcon()
-        icon1.addPixmap(QPixmap(self.get_image("pixmaps/view-refresh.png")), QIcon.Normal, QIcon.Off)
+        icon1.addPixmap(QPixmap(self.get_image(view_refresh_path)), QIcon.Normal, QIcon.Off)
 
         self.recompress.setIcon(icon1)
         self.recompress.setCheckable(False)
         self.recompress.setObjectName("recompress")
         self.horizontalLayout.addWidget(self.recompress)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
+
+        self.clearTable = QPushButton(self.frame)
+        font = QFont()
+        font.setPointSize(9)
+        self.clearTable.setFont(font)
+        self.clearTable.setCursor(Qt.PointingHandCursor)
+        icon = QIcon()
+        icon.addPixmap(QPixmap(self.get_image(clear_table_path)), QIcon.Normal, QIcon.Off)  # replace 'path_to_clear_icon' with the actual path
+        self.clearTable.setIcon(icon)
+        self.clearTable.setObjectName("clearTable")
+        self.horizontalLayout.addWidget(self.clearTable)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
 
         self.processedfiles = TrimageTableView(self.frame)
@@ -170,3 +187,9 @@ class Ui_trimage():
             "Drag files in here", None))
         self.processedfiles.setWhatsThis(QApplication.translate("trimage",
             "Drag files in here", None))
+        self.clearTable.setToolTip(QApplication.translate("trimage",
+            "Clear the table", None))
+        self.clearTable.setText(QApplication.translate("trimage",
+                    "&Clear Table", None))
+        self.clearTable.setShortcut(QApplication.translate("trimage",
+            "Alt+C", None))
