@@ -1,0 +1,358 @@
+name: Build and Release Trimage
+
+on:
+  push:
+    branches: [master, linux_addons]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version override (e.g., 1.1.0)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ─── Lightweight CI check ───
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: pip install PyQt5 Pillow
+      - name: Syntax check
+        run: |
+          python -m py_compile trimage/trimage.py
+          python -m py_compile trimage/ui.py
+          python -m py_compile trimage/tools.py
+          python -m py_compile trimage/__main__.py
+          python -m py_compile trimage/preferences.py
+          python -m py_compile trimage/tinypng.py
+          python -m py_compile trimage/ThreadPool/ThreadPool.py
+      - name: Import check
+        run: |
+          cd trimage && python -c "from tools import check_dependencies, detect_imagemagick, human_readable_size; print('tools.py OK')"
+          python -c "import PyQt5.QtCore; import PIL.Image; print('dependencies OK')"
+
+  # ─── Linux Build ───
+  build-linux:
+    runs-on: ubuntu-22.04
+    needs: lint-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxcb-xinerama0 libxcb-cursor0 \
+            libgl1-mesa-glx libegl1
+
+      - name: Install Python dependencies
+        run: pip install PyQt5 Pillow pyinstaller
+
+      - name: Verify bundled Linux tools
+        run: |
+          TOOLS=(
+            trimage/tools/advpng/advpng
+            trimage/tools/guetzli/guetzli
+            trimage/tools/jpegoptim/jpegoptim
+            trimage/tools/mozjpeg/jpegtran-static
+            trimage/tools/mozjpeg/cjpeg-static
+            trimage/tools/mozjpeg/djpeg-static
+            trimage/tools/optipng/optipng
+            trimage/tools/pngcrush/pngcrush
+            trimage/tools/webp/cwebp
+            trimage/tools/webp/dwebp
+            trimage/tools/webp/gif2webp
+            trimage/tools/webp/webpmux
+            trimage/tools/webp/webpinfo
+            trimage/tools/gifsicle/gifsicle
+          )
+          missing=0
+          for tool in "${TOOLS[@]}"; do
+            if [ ! -f "$tool" ]; then
+              echo "::warning::Missing tool: $tool"
+              missing=$((missing + 1))
+            else
+              chmod +x "$tool"
+            fi
+          done
+          # Also chmod optional tools if they exist
+          find trimage/tools -type f ! -name "*.py" ! -name "*.md" \
+               ! -name "*.a" ! -name "LICENSE*" ! -name "COPYING*" \
+               ! -name "README*" -exec chmod +x {} \; 2>/dev/null || true
+          if [ $missing -gt 3 ]; then
+            echo "::error::Too many missing tools ($missing). Aborting."
+            exit 1
+          fi
+          echo "Linux tools verified."
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm trimage.spec
+
+      - name: Verify build output
+        run: |
+          test -f dist/trimage || { echo "::error::PyInstaller output not found"; exit 1; }
+          file dist/trimage
+          ls -lh dist/trimage
+
+      - name: Build .deb package
+        run: python build_deb.py
+
+      - name: Upload standalone binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: trimage-linux-binary
+          path: dist/trimage
+          retention-days: 30
+
+      - name: Upload .deb package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trimage-linux-deb
+          path: deb_build/*.deb
+          retention-days: 30
+
+  # ─── Windows Build ───
+  build-windows:
+    runs-on: windows-latest
+    needs: lint-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: pip install PyQt5 Pillow pyinstaller
+
+      - name: Verify bundled Windows tools
+        shell: bash
+        run: |
+          TOOLS=(
+            trimage/tools/windows/advpng/advpng.exe
+            trimage/tools/windows/gifsicle/gifsicle.exe
+            trimage/tools/windows/guetzli/guetzli.exe
+            trimage/tools/windows/jpegoptim/jpegoptim.exe
+            trimage/tools/windows/mozjpeg/jpegtran-static.exe
+            trimage/tools/windows/optipng/optipng.exe
+            trimage/tools/windows/pngcrush/pngcrush.exe
+            trimage/tools/windows/webp/cwebp.exe
+            trimage/tools/windows/gif2webp.exe
+          )
+          missing=0
+          for tool in "${TOOLS[@]}"; do
+            if [ ! -f "$tool" ]; then
+              echo "::warning::Missing tool: $tool"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ $missing -gt 2 ]; then
+            echo "::error::Too many missing tools ($missing). Aborting."
+            exit 1
+          fi
+          echo "Windows tools verified."
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm trimage.spec
+
+      - name: Verify build output
+        shell: bash
+        run: |
+          test -f dist/trimage.exe || { echo "::error::PyInstaller output not found"; exit 1; }
+          ls -lh dist/trimage.exe
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: trimage-windows-exe
+          path: dist/trimage.exe
+          retention-days: 30
+
+  # ─── macOS Build ───
+  build-macos:
+    runs-on: macos-13
+    needs: lint-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: pip install PyQt5 Pillow pyinstaller
+
+      - name: Install compression tools via Homebrew
+        run: |
+          brew install jpegoptim optipng advancecomp pngcrush \
+                       gifsicle webp guetzli mozjpeg jpeg-turbo
+
+      - name: Copy Homebrew tools into expected directory structure
+        run: |
+          # The spec uses trimage/tools/ for non-Windows platforms.
+          # Overwrite the Linux ELF binaries with macOS Mach-O native ones.
+
+          cp "$(brew --prefix jpegoptim)/bin/jpegoptim" trimage/tools/jpegoptim/jpegoptim
+          cp "$(brew --prefix optipng)/bin/optipng" trimage/tools/optipng/optipng
+          cp "$(brew --prefix advancecomp)/bin/advpng" trimage/tools/advpng/advpng
+          cp "$(brew --prefix pngcrush)/bin/pngcrush" trimage/tools/pngcrush/pngcrush
+          cp "$(brew --prefix gifsicle)/bin/gifsicle" trimage/tools/gifsicle/gifsicle
+          cp "$(brew --prefix guetzli)/bin/guetzli" trimage/tools/guetzli/guetzli
+
+          # mozjpeg (keg-only)
+          cp "$(brew --prefix mozjpeg)/bin/jpegtran" trimage/tools/mozjpeg/jpegtran-static
+          cp "$(brew --prefix mozjpeg)/bin/cjpeg" trimage/tools/mozjpeg/cjpeg-static
+          cp "$(brew --prefix mozjpeg)/bin/djpeg" trimage/tools/mozjpeg/djpeg-static
+
+          # webp suite
+          cp "$(brew --prefix webp)/bin/cwebp" trimage/tools/webp/cwebp
+          cp "$(brew --prefix webp)/bin/dwebp" trimage/tools/webp/dwebp
+          cp "$(brew --prefix webp)/bin/gif2webp" trimage/tools/webp/gif2webp
+          cp "$(brew --prefix webp)/bin/webpmux" trimage/tools/webp/webpmux
+          cp "$(brew --prefix webp)/bin/webpinfo" trimage/tools/webp/webpinfo
+
+          # jpeg-turbo
+          mkdir -p trimage/tools/jpeg-turbo
+          cp "$(brew --prefix jpeg-turbo)/bin/cjpeg" trimage/tools/jpeg-turbo/cjpeg
+          cp "$(brew --prefix jpeg-turbo)/bin/djpeg" trimage/tools/jpeg-turbo/djpeg
+          cp "$(brew --prefix jpeg-turbo)/bin/jpegtran" trimage/tools/jpeg-turbo/jpegtran
+
+          # Make all tools executable
+          find trimage/tools -type f ! -name "*.py" ! -name "*.md" \
+               ! -name "*.a" ! -name "LICENSE*" ! -name "COPYING*" \
+               ! -name "README*" -exec chmod +x {} \; 2>/dev/null || true
+
+          echo "macOS tools copied and permissions set."
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm trimage.spec
+
+      - name: Create .app bundle
+        run: |
+          APP_DIR="dist/Trimage.app"
+          mkdir -p "$APP_DIR/Contents/MacOS"
+          mkdir -p "$APP_DIR/Contents/Resources"
+          cp dist/trimage "$APP_DIR/Contents/MacOS/Trimage"
+          chmod +x "$APP_DIR/Contents/MacOS/Trimage"
+
+          # Copy icon
+          if [ -f trimage/pixmaps/trimage-icon.png ]; then
+            cp trimage/pixmaps/trimage-icon.png "$APP_DIR/Contents/Resources/trimage.png"
+          fi
+
+          cat > "$APP_DIR/Contents/Info.plist" << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key>
+            <string>Trimage</string>
+            <key>CFBundleDisplayName</key>
+            <string>Trimage Image Compressor</string>
+            <key>CFBundleExecutable</key>
+            <string>Trimage</string>
+            <key>CFBundleIdentifier</key>
+            <string>org.trimage.Trimage</string>
+            <key>CFBundleVersion</key>
+            <string>1.1.0</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.1.0</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleSignature</key>
+            <string>TRIM</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+            <key>LSMinimumSystemVersion</key>
+            <string>10.15</string>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "Trimage" \
+            --window-size 600 400 \
+            --icon "Trimage.app" 150 200 \
+            --app-drop-link 450 200 \
+            --no-internet-enable \
+            "Trimage-1.1.0-macOS-x86_64.dmg" \
+            "dist/Trimage.app" || {
+              # Fallback: use hdiutil directly if create-dmg fails
+              hdiutil create -volname "Trimage" -srcfolder "dist/Trimage.app" \
+                -ov -format UDZO "Trimage-1.1.0-macOS-x86_64.dmg"
+            }
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: trimage-macos-dmg
+          path: "*.dmg"
+          retention-days: 30
+
+  # ─── GitHub Release (tag push only) ───
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p release
+
+          # Linux
+          cp artifacts/trimage-linux-binary/trimage \
+             "release/Trimage-${VERSION}-linux-amd64"
+          chmod +x "release/Trimage-${VERSION}-linux-amd64"
+          cp artifacts/trimage-linux-deb/*.deb release/
+
+          # Windows
+          cp artifacts/trimage-windows-exe/trimage.exe \
+             "release/Trimage-${VERSION}-Setup-win64.exe"
+
+          # macOS
+          cp artifacts/trimage-macos-dmg/*.dmg release/
+
+          echo "=== Release assets ==="
+          ls -lh release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Trimage ${{ steps.version.outputs.version }}"
+          draft: true
+          generate_release_notes: true
+          files: release/*

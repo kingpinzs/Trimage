@@ -7,7 +7,7 @@
       \__\__/\____/\_____/__/ ____  ___
             / _/ /    \    \ /  _ \/ _/
            /  \_/   / /   \ \   __/  \__
-           \____/____/\_____/_____/____/v1.3.0
+           \____/____/\_____/_____/____/v1.3.2
 ```
 
 WebP codec is a library to encode and decode images in WebP format. This package
@@ -25,20 +25,32 @@ https://www.webmproject.org/license/software/ or the "COPYING" file for details.
 An additional intellectual property rights grant can be found in the file
 PATENTS.
 
-## Building
+## Files
 
-See the [building documentation](doc/building.md).
+*   bin/cwebp : encoding tool
+*   bin/dwebp : decoding tool
+*   bin/gif2webp : gif conversion tool
+*   bin/img2webp : animation creation tool
+*   bin/vwebp : webp visualization tool
+*   bin/webpinfo : webp analysis tool
+*   bin/webpmux : webp muxing tool
+*   bin/anim\_diff : webp file comparison tool
+*   bin/anim\_dump : tool for dumping animation frames
+*   bin/get\_disto : tool for calculating file distortion
+*   bin/webp\_quality : webp quality estimation tool
+*   doc/ : manual in HTML and text formats
+*   lib/ : static libraries
+*   include/webp : headers
 
 ## Encoding and Decoding Tools
 
-The examples/ directory contains tools to encode and decode images and
-animations, view information about WebP images, and more. See the
+The bin/ directory contains tools to encode and decode images and animations,
+view information about WebP images, and more. See the
 [tools documentation](doc/tools.md).
 
 ## APIs
 
-See the [APIs documentation](doc/api.md), and API usage examples in the
-`examples/` directory.
+See the [APIs documentation](doc/api.md).
 
 ## Bugs
 

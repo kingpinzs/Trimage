@@ -1,3 +1,15 @@
+trimage (1.1.0-0ubuntu1) jammy; urgency=low
+
+  * Add GIF and WEBP format support
+  * Bundle all compression tools (no external dependencies)
+  * Fix 19+ bugs in compression pipeline
+  * Fix drag-and-drop support
+  * Replace optparse with argparse
+  * Add logging, replace debug print statements
+  * PyInstaller-based build with bundled tools
+
+ -- Jeremy King <help@trimage.org>  Thu, 27 Feb 2026 00:00:00 +0000
+
 trimage (1.0.6-0ubuntu1) bionic; urgency=low
 
   * Migrate to python 3 and python-qt 5

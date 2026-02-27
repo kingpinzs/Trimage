@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 
+import sys
 from os import path
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-trimage_icon_path = path.join("pixmaps", "trimage-icon.png")
-list_add_path = path.join("pixmaps", "list-add.png")
-view_refresh_path = path.join("pixmaps", "view-refresh.png")
-clear_table_path = path.join("pixmaps", "clear_table.png")
+# Determine base path (same logic as trimage.py for PyInstaller support)
+if getattr(sys, 'frozen', False):
+    _base_path = path.dirname(sys.executable)
+    if hasattr(sys, '_MEIPASS'):
+        _base_path = sys._MEIPASS
+else:
+    _base_path = path.dirname(path.realpath(__file__))
+
+trimage_icon_path = path.join(_base_path, "pixmaps", "trimage-icon.png")
+list_add_path = path.join(_base_path, "pixmaps", "list-add.png")
+view_refresh_path = path.join(_base_path, "pixmaps", "view-refresh.png")
+clear_table_path = path.join(_base_path, "pixmaps", "clear_table.png")
 
 
 class TrimageTableView(QTableView):
@@ -20,30 +29,50 @@ class TrimageTableView(QTableView):
     def __init__(self, parent=None):
         super(TrimageTableView, self).__init__(parent)
         self.setAcceptDrops(True)
+        self.setDragDropOverwriteMode(False)
+        self.setDragDropMode(QAbstractItemView.DropOnly)
+        self.setDefaultDropAction(Qt.CopyAction)
+        # Install event filter on viewport to intercept drag/drop
+        # before Qt's model-based handling can reject them
+        self.viewport().installEventFilter(self)
 
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls:
-            event.accept()
-        else:
-            event.ignore()
+    def setModel(self, model):
+        """Override setModel to re-install event filter on viewport."""
+        super().setModel(model)
+        self.viewport().installEventFilter(self)
 
-    def dragMoveEvent(self, event):
-        event.accept()
-
-    def dropEvent(self, event):
-        event.accept()
-        filelist = []
-        for url in event.mimeData().urls():
-            filelist.append(url.toLocalFile())
-
-        self.drop_event_signal.emit(filelist)
+    def eventFilter(self, obj, event):
+        """Intercept drag/drop events on the viewport."""
+        if obj is self.viewport():
+            if event.type() == QEvent.DragEnter:
+                if event.mimeData().hasUrls():
+                    event.acceptProposedAction()
+                    return True
+            elif event.type() == QEvent.DragMove:
+                if event.mimeData().hasUrls():
+                    event.acceptProposedAction()
+                    return True
+            elif event.type() == QEvent.Drop:
+                if event.mimeData().hasUrls():
+                    event.acceptProposedAction()
+                    filelist = []
+                    for url in event.mimeData().urls():
+                        filelist.append(url.toLocalFile())
+                    self.drop_event_signal.emit(filelist)
+                    return True
+        return super().eventFilter(obj, event)
 
 
 class Ui_trimage():
     def get_image(self, image):
-        """Get the correct link to the images used in the UI."""
-        imagelink = path.join(path.dirname(path.dirname(path.realpath(__file__))), "trimage/" + image)
-        return imagelink
+        """Get the correct path to an image used in the UI.
+
+        If the path is already absolute (set by base_path), return as-is.
+        Otherwise resolve relative to the package directory.
+        """
+        if path.isabs(image):
+            return image
+        return path.join(_base_path, image)
 
     def setupUi(self, trimage):
         """Setup the entire UI."""
@@ -135,11 +164,35 @@ class Ui_trimage():
         self.clearTable.setFont(font)
         self.clearTable.setCursor(Qt.PointingHandCursor)
         icon = QIcon()
-        icon.addPixmap(QPixmap(self.get_image(clear_table_path)), QIcon.Normal, QIcon.Off)  # replace 'path_to_clear_icon' with the actual path
+        icon.addPixmap(QPixmap(self.get_image(clear_table_path)), QIcon.Normal, QIcon.Off)
         self.clearTable.setIcon(icon)
         self.clearTable.setObjectName("clearTable")
         self.horizontalLayout.addWidget(self.clearTable)
-        self.verticalLayout_2.addLayout(self.horizontalLayout)
+
+        self.alwaysOnTop = QPushButton(self.frame)
+        font = QFont()
+        font.setPointSize(9)
+        self.alwaysOnTop.setFont(font)
+        self.alwaysOnTop.setCursor(Qt.PointingHandCursor)
+        self.alwaysOnTop.setCheckable(True)
+        self.alwaysOnTop.setObjectName("alwaysOnTop")
+        self.horizontalLayout.addWidget(self.alwaysOnTop)
+
+        self.settingsBtn = QPushButton(self.frame)
+        font = QFont()
+        font.setPointSize(9)
+        self.settingsBtn.setFont(font)
+        self.settingsBtn.setCursor(Qt.PointingHandCursor)
+        self.settingsBtn.setObjectName("settingsBtn")
+        self.horizontalLayout.addWidget(self.settingsBtn)
+
+        self.rescueBtn = QPushButton(self.frame)
+        font = QFont()
+        font.setPointSize(9)
+        self.rescueBtn.setFont(font)
+        self.rescueBtn.setCursor(Qt.PointingHandCursor)
+        self.rescueBtn.setObjectName("rescueBtn")
+        self.horizontalLayout.addWidget(self.rescueBtn)
 
         self.processedfiles = TrimageTableView(self.frame)
         self.processedfiles.setEnabled(True)
@@ -193,3 +246,93 @@ class Ui_trimage():
                     "&Clear Table", None))
         self.clearTable.setShortcut(QApplication.translate("trimage",
             "Alt+C", None))
+        self.alwaysOnTop.setToolTip(QApplication.translate("trimage",
+            "Keep window always on top", None))
+        self.alwaysOnTop.setText(QApplication.translate("trimage",
+            "&Pin", None))
+        self.alwaysOnTop.setShortcut(QApplication.translate("trimage",
+            "Alt+P", None))
+        self.settingsBtn.setToolTip(QApplication.translate("trimage",
+            "Preferences", None))
+        self.settingsBtn.setText(QApplication.translate("trimage",
+            "&Settings", None))
+        self.settingsBtn.setShortcut(QApplication.translate("trimage",
+            "Alt+S", None))
+        self.rescueBtn.setToolTip(QApplication.translate("trimage",
+            "Rescue images from files", None))
+        self.rescueBtn.setText(QApplication.translate("trimage",
+            "Resc&ue", None))
+        self.rescueBtn.setShortcut(QApplication.translate("trimage",
+            "Alt+U", None))
+
+
+class DropZoneWidget(QWidget):
+    """Floating, always-on-top drop zone for quick drag-and-drop compression."""
+
+    files_dropped = pyqtSignal(list)
+
+    SIZE = 64
+
+    def __init__(self, parent=None):
+        super().__init__(None)  # No parent — independent top-level widget
+        self._parent = parent
+        self.setWindowFlags(
+            Qt.FramelessWindowHint
+            | Qt.WindowStaysOnTopHint
+            | Qt.Tool
+        )
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setFixedSize(self.SIZE, self.SIZE)
+        self.setAcceptDrops(True)
+        self.setToolTip("Drop images here to compress")
+
+        # For dragging the widget around
+        self._drag_pos = None
+
+        # Load the Trimage icon
+        self._icon = QPixmap(trimage_icon_path).scaled(
+            40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        # Semi-transparent dark rounded rectangle
+        painter.setBrush(QColor(50, 50, 50, 180))
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(self.rect(), 12, 12)
+        # Draw the icon centered
+        x = (self.SIZE - self._icon.width()) // 2
+        y = (self.SIZE - self._icon.height()) // 2
+        painter.drawPixmap(x, y, self._icon)
+        painter.end()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            # Highlight on hover
+            self.setStyleSheet("")  # reset
+            self.update()
+
+    def dragLeaveEvent(self, event):
+        self.update()
+
+    def dropEvent(self, event):
+        urls = event.mimeData().urls()
+        files = [url.toLocalFile() for url in urls if url.isLocalFile()]
+        if files:
+            self.files_dropped.emit(files)
+        event.acceptProposedAction()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_pos = event.globalPos() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._drag_pos is not None and event.buttons() & Qt.LeftButton:
+            self.move(event.globalPos() - self._drag_pos)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None

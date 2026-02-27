@@ -1,161 +1,148 @@
 {
     "app-id": "org.trimage.Trimage",
     "runtime": "org.freedesktop.Platform",
-    "runtime-version": "18.08",
+    "runtime-version": "23.08",
     "sdk": "org.freedesktop.Sdk",
-    "command": "/usr/bin/bash",
+    "command": "runner.sh",
     "finish-args": [
-      "--share=ipc",
-      "--socket=x11",
-      "--socket=wayland",
-      "--socket=pulseaudio",
-      "--talk-name=org.freedesktop.Notifications",
-      "--talk-name=org.freedesktop.Flatpak",
-      "--device=dri",
-      "--filesystem=~/.config/dconf:ro",
-          "--filesystem=xdg-download",
-          "--filesystem=xdg-pictures",
-          "--filesystem=xdg-run/dconf",
-      "--command=runner.sh"
+        "--share=ipc",
+        "--socket=x11",
+        "--socket=wayland",
+        "--talk-name=org.freedesktop.Notifications",
+        "--device=dri",
+        "--filesystem=xdg-download",
+        "--filesystem=xdg-pictures",
+        "--filesystem=home"
     ],
     "modules": [
-      {
-        "name": "cpython",
-        "sources": [
-            {
-                "type": "archive",
-                "url": "https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz",
-                "md5": "d33e4aae66097051c2eca45ee3604803"
-            }
-        ]
-    },
-      {
-        "name": "jpegoptim",
-        "sources": [
-          {
-            "type": "archive",
-            "url": "https://github.com/tjko/jpegoptim/archive/RELEASE.1.4.6.tar.gz",
-            "sha256": "c44dcfac0a113c3bec13d0fc60faf57a0f9a31f88473ccad33ecdf210b4c0c52"
-          }
-        ]
-      },
-      {
-        "name": "optipng",
-        "build-options": {
-          "config-opts": [
-            "--with-system-libs"
-          ]
-        },
-        "sources": [
-          {
-            "type": "archive",
-            "url": "https://netcologne.dl.sourceforge.net/project/optipng/OptiPNG/optipng-0.7.7/optipng-0.7.7.tar.gz",
-            "sha256": "4f32f233cef870b3f95d3ad6428bfe4224ef34908f1b42b0badf858216654452"
-          }
-        ]
-      },
-      {
-        "name": "pngcrush",
-        "buildsystem": "simple",
-        "sources": [
-          {
-            "type": "archive",
-            "url": "https://netcologne.dl.sourceforge.net/project/pmt/pngcrush/1.8.13/pngcrush-1.8.13.tar.gz",
-            "sha256": "bac37d4b2be88d7e88aadcde9661beb3a513a90e7d26784f906c1e2da8ba332e"
-          }
-        ],
-        "build-commands": [
-          "make -f Makefile",
-          "install -D pngcrush /app/bin/pngcrush"
-        ]
-      },
-      {
-        "name": "advpng",
-        "sources": [
-          {
-            "type": "archive",
-            "url": "https://github.com/amadvance/advancecomp/releases/download/v2.1/advancecomp-2.1.tar.gz",
-            "sha256": "3ac0875e86a8517011976f04107186d5c60d434954078bc502ee731480933eb8"
-          }
-        ]
-      },    
-      {
-        "name": "pip-install",
-        "buildsystem": "simple",
-        "build-options": {
-            "build-args": [
-                "--share=network"
+        {
+            "name": "cpython",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://www.python.org/ftp/python/3.11.7/Python-3.11.7.tar.xz",
+                    "sha256": "18c518b5ea59a6e87b923a1e16acd1dd301b39bccbf73f1cfbb8e0e2e5b86b29"
+                }
             ]
         },
-        "build-commands": [
-            "pip3 install pip --upgrade",
-            "pip3 install setuptools --upgrade"
-        ]
-    },
-    {
-      "name": "PyQt5",
-      "buildsystem": "simple",
-      "build-options": {
-        "build-args": [
-          "--share=network"
-        ]
-      },
-      "build-commands": [
-        "pip3 install PyQt5-5.12.1-5.12.2-cp35.cp36.cp37.cp38-abi3-manylinux1_x86_64.whl"
-      ],
-      "sources": [
         {
-          "type": "file",
-          "url": "https://files.pythonhosted.org/packages/98/61/fcd53201a23dd94a1264c29095821fdd55c58b4cd388dc7115e5288866db/PyQt5-5.12.1-5.12.2-cp35.cp36.cp37.cp38-abi3-manylinux1_x86_64.whl",
-          "sha256": "d4e88208dfd017636e4b1f407990d0c3b6cf47afed6be4f2fb6ca887ef513e4b"
-        }
-      ]
-    },
-      {
-        "name": "trimage",
-        "buildsystem": "simple",
-        "build-options": {
-          "build-args": [
-            "--share=network"
-          ]
+            "name": "jpegoptim",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/tjko/jpegoptim/archive/RELEASE.1.5.5.tar.gz",
+                    "sha256": "90a309d1c092da382e9e5b291ef05e14a97d1585e2e3a8a6cc1b932a36d382c4"
+                }
+            ]
         },
-        "build-commands": [
-          "mkdir /app/share/applications",
-          "cp trimage.desktop /app/share/applications/org.trimage.Trimage.desktop",
-          "cp trimage.svg /app/share/applications",
-          "install -D runner.sh /app/bin/runner.sh",
-          "install -D setup.py /app/package/setup.py",
-          "cp -r trimage/ /app/package/trimage",
-          "pip3 install /app/package"
-        ],
-        "sources": [
-          {
-            "type": "file",
-            "path": "setup.py"
-          },
-          {
-            "type": "dir",
-            "path": "trimage/",
-            "dest": "trimage/"
-          },
-          {
-            "type": "dir",
-            "path": "resources/",
-            "dest": "resources/"
-          }, 
-          {
-            "type": "file",
-            "path": "runner.sh"
-          },
-          {
-            "type": "file",
-            "path": "desktop/trimage.desktop"
-          },
-          {
-            "type": "file",
-            "path": "desktop/trimage.svg"
-          }
-        ]
-      }
+        {
+            "name": "optipng",
+            "build-options": {
+                "config-opts": ["--with-system-libs"]
+            },
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://netcologne.dl.sourceforge.net/project/optipng/OptiPNG/optipng-0.7.8/optipng-0.7.8.tar.gz",
+                    "sha256": "25a3607571d13941e3b812bab3f3901cde0b648f696fef09c5e70b30acf3e17f"
+                }
+            ]
+        },
+        {
+            "name": "pngcrush",
+            "buildsystem": "simple",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://netcologne.dl.sourceforge.net/project/pmt/pngcrush/1.8.13/pngcrush-1.8.13.tar.gz",
+                    "sha256": "bac37d4b2be88d7e88aadcde9661beb3a513a90e7d26784f906c1e2da8ba332e"
+                }
+            ],
+            "build-commands": [
+                "make -f Makefile",
+                "install -D pngcrush /app/bin/pngcrush"
+            ]
+        },
+        {
+            "name": "advpng",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/amadvance/advancecomp/releases/download/v2.6/advancecomp-2.6.tar.gz",
+                    "sha256": "b09180e9bab6a01aadaee44a6dafb14df7ebfe12ca025bab3a0185b479ba79ab"
+                }
+            ]
+        },
+        {
+            "name": "gifsicle",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://www.lcdf.org/gifsicle/gifsicle-1.94.tar.gz",
+                    "sha256": "2eb22c3dab63e3267f24d6a8e979c0e55e27a1b3db26c9c08cb2221dc1120d67"
+                }
+            ]
+        },
+        {
+            "name": "pip-install",
+            "buildsystem": "simple",
+            "build-options": {
+                "build-args": ["--share=network"]
+            },
+            "build-commands": [
+                "pip3 install pip --upgrade",
+                "pip3 install setuptools --upgrade"
+            ]
+        },
+        {
+            "name": "python-deps",
+            "buildsystem": "simple",
+            "build-options": {
+                "build-args": ["--share=network"]
+            },
+            "build-commands": [
+                "pip3 install PyQt5==5.15.11 Pillow"
+            ]
+        },
+        {
+            "name": "trimage",
+            "buildsystem": "simple",
+            "build-options": {
+                "build-args": ["--share=network"]
+            },
+            "build-commands": [
+                "mkdir -p /app/share/applications",
+                "mkdir -p /app/share/icons/hicolor/scalable/apps",
+                "cp trimage.desktop /app/share/applications/org.trimage.Trimage.desktop",
+                "cp trimage.svg /app/share/icons/hicolor/scalable/apps/trimage.svg",
+                "install -D runner.sh /app/bin/runner.sh",
+                "install -D setup.py /app/package/setup.py",
+                "cp -r trimage/ /app/package/trimage",
+                "pip3 install /app/package"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "path": "setup.py"
+                },
+                {
+                    "type": "dir",
+                    "path": "trimage/",
+                    "dest": "trimage/"
+                },
+                {
+                    "type": "file",
+                    "path": "runner.sh"
+                },
+                {
+                    "type": "file",
+                    "path": "desktop/trimage.desktop"
+                },
+                {
+                    "type": "file",
+                    "path": "desktop/trimage.svg"
+                }
+            ]
+        }
     ]
-  }
+}

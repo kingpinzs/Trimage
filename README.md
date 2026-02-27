@@ -4,6 +4,8 @@ A cross-platform tool for optimizing PNG, JPG, GIF, and WEBP files.
 
 Trimage is a cross-platform GUI and command-line interface(WIP) to optimize image files via 
 
+[webp](https://storage.googleapis.com/downloads.webmproject.org/releases/webp/index.html)
+
 [advpng](http://advancemame.sourceforge.net/comp-readme.html)
 
 [jpegoptim](http://www.kokkonen.net/tjko/projects.html)
