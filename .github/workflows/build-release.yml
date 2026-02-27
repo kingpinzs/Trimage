@@ -187,7 +187,7 @@ jobs:
 
   # ─── macOS Build ───
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-14
     needs: lint-and-test
     steps:
       - uses: actions/checkout@v4
@@ -296,11 +296,11 @@ jobs:
             --icon "Trimage.app" 150 200 \
             --app-drop-link 450 200 \
             --no-internet-enable \
-            "Trimage-1.1.0-macOS-x86_64.dmg" \
+            "Trimage-1.1.0-macOS-arm64.dmg" \
             "dist/Trimage.app" || {
               # Fallback: use hdiutil directly if create-dmg fails
               hdiutil create -volname "Trimage" -srcfolder "dist/Trimage.app" \
-                -ov -format UDZO "Trimage-1.1.0-macOS-x86_64.dmg"
+                -ov -format UDZO "Trimage-1.1.0-macOS-arm64.dmg"
             }
 
       - name: Upload macOS DMG
